@@ -210,13 +210,69 @@ app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgre
 app.get("/api/settings", async (_,res)=>res.json(await getSettings()));
 app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
 
-app.post("/api/auth/admin", async (req,res)=>{
-  const phone=normalizePhone(req.body.phone), password=String(req.body.password||"");
+ app.post("/api/auth/admin", async (req,res)=>{
+  const login = String(req.body.phone || "").trim();
+  const password = String(req.body.password || "");
+
+  const adminUser = String(process.env.ADMIN_USER || "").trim();
+  const adminPassword = String(process.env.ADMIN_PASSWORD || "");
+
+  // Railway ADMIN_USER + ADMIN_PASSWORD login
+  if (
+    adminUser &&
+    adminPassword &&
+    login === adminUser &&
+    password === adminPassword
+  ) {
+    return res.json({
+      token: tokenFor({
+        role: "admin",
+        id: "env-admin",
+        phone: login
+      }),
+      admin: {
+        phone: login,
+        name: "Admin"
+      }
+    });
+  }
+
+  // Existing database admin login
+  const phone = normalizePhone(login);
   let admin;
-  if(usePostgres) admin=(await pool.query("SELECT * FROM admins WHERE phone=$1",[phone])).rows[0];
-  else admin=loadJson().admins.find(a=>a.phone===phone);
-  if(!admin || !(await bcrypt.compare(password, admin.password_hash || admin.passwordHash))) return res.status(401).json({error:"Утас эсвэл нууц үг буруу"});
-  res.json({token:tokenFor({role:"admin",id:admin.id,phone}),admin:{phone,name:admin.name}});
+
+  if (usePostgres) {
+    admin = (await pool.query(
+      "SELECT * FROM admins WHERE phone=$1",
+      [phone]
+    )).rows[0];
+  } else {
+    admin = loadJson().admins.find(a => a.phone === phone);
+  }
+
+  if (
+    !admin ||
+    !(await bcrypt.compare(
+      password,
+      admin.password_hash || admin.passwordHash
+    ))
+  ) {
+    return res.status(401).json({
+      error: "Утас эсвэл нууц үг буруу"
+    });
+  }
+
+  res.json({
+    token: tokenFor({
+      role: "admin",
+      id: admin.id,
+      phone
+    }),
+    admin: {
+      phone,
+      name: admin.name
+    }
+  });
 });
 
 app.post("/api/auth/customer", async (req,res)=>{
