@@ -36,11 +36,11 @@ const defaultData = {
     airCargo: process.env.AIR_CARGO_DAYS || "5-7 хоног",
     groundCargo: process.env.GROUND_CARGO_DAYS || "14-16 хоног",
     bankName: "Хаан банк",
-    bankAccount: "",
-    bankHolder: "",
-    instagram: "",
-    facebook: "",
-    announcement: "Солонгосоос бүх төрлийн бараа захиалга 💜"
+    bankAccount: "5071274473",
+    bankHolder: "GANBOLD ENKHTSATSRALT",
+    instagram: "moode_seoul",
+    facebook: "Moode Seoul",
+    announcement: "Солонгосоос бүх төрлийн бренд бараа захиалга NIKE ADIDAS UNDER ARNOUR💜"
   },
   admins: [],
   products: [],
