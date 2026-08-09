@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOODE SEOUL — Korea to Mongolia</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="logo">MS</div>
+  <div class="brand"><b id="brandName">MOODE SEOUL</b><span>Korea → Mongolia</span></div>
+  <button class="icon" onclick="openAdmin()">☰</button>
+</header>
+<div class="announce" id="announce"></div>
+
+<main>
+<section class="hero">
+  <div><span class="pill">🇰🇷 СОЛОНГОСООС ШУУД</span><h1>Оригинал бараа.<br><em>Гоё сонголт.</em></h1><p>Солонгосоос бүх төрлийн бараа захиалж, захиалгаа утасны дугаараар хянаарай.</p></div>
+  <div class="hero-card"><b>Хүргэлт</b><strong id="airDays">5-7 хоног</strong><span>агаар</span><strong id="groundDays">14-16 хоног</strong><span>газар</span></div>
+</section>
+
+<section class="track">
+  <div class="tabs"><button class="active" onclick="setTrack('phone',this)">📞 Утасны дугаар</button><button onclick="setTrack('bank',this)">🏦 Дансны дугаар</button></div>
+  <input id="trackInput" placeholder="Утасны дугаараа оруулна уу">
+  <button class="primary" onclick="trackOrders()">Хайх →</button>
+  <div class="hints"><div><b>Шууд</b><span>Хариу</span></div><div><b>Төлөв</b><span>Шинэчлэлт</span></div><div><b>Нэг дор</b><span>Мэдээлэл</span></div></div>
+</section>
+
+<section><div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div><div id="products" class="grid"></div></section>
+<section id="ordersSection" class="hidden"><div class="section-title"><h2>Таны захиалгууд</h2></div><div id="orders"></div></section>
+
+<section class="info">
+  <div><b>Захиалга өгөх</b><p>1. Бараагаа сонгоно → 2. Захиалга илгээнэ → 3. Төлбөрөө баталгаажуулна → 4. Каргонд өгсөн кодоо авна → 5. Карго таньтай холбогдож барааг өгнө.</p></div>
+  <div><b>Төлбөр</b><p>Барааны төлбөрийг урьдчилж баталгаажуулна. Каргоны төлбөр тусдаа бөгөөд бараагаа авахдаа каргонд төлнө.</p></div>
+</section>
+</main>
+
+<div id="cart" class="drawer hidden"><div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div><div id="cartItems"></div><input id="customerName" placeholder="Нэр"><input id="customerPhone" placeholder="Утасны дугаар"><input id="customerAddress" placeholder="Хаяг"><select id="cargoType"><option value="air">Агаар — 5-7 хоног</option><option value="ground">Газар — 14-16 хоног</option></select><button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button></div>
+
+<div id="adminModal" class="modal hidden"><div class="admin-box"><div class="drawer-head"><h2>Admin</h2><button onclick="closeAdmin()">×</button></div><div id="adminLogin"><input id="adminPhone" placeholder="Утас"><input id="adminPassword" type="password" placeholder="Нууц үг"><button class="primary" onclick="adminLogin()">Нэвтрэх</button></div><div id="adminPanel" class="hidden"><div class="admin-nav"><button onclick="adminTab('dashboard')">Хянах</button><button onclick="adminTab('products')">Бараа</button><button onclick="adminTab('orders')">Захиалга</button><button onclick="adminTab('settings')">Тохиргоо</button></div><div id="adminContent"></div></div></div></div>
+
+<button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
+<footer><b id="footerName">MOODE SEOUL</b><p id="footerPhone">(976) 7288-3815</p><p>© 2026 MOODE SEOUL. Бүх эрх хуулиар хамгаалагдсан.</p></footer>
+<script src="/app.js"></script>
+</body></html>
