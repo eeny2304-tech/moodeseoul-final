@@ -233,4 +233,108 @@ footer b{
   display:block; font-size:.95rem; margin-bottom:6px;
   background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
 }
-footer p{margin:2px 0;}
+footer p{margin:2px 0;} 
+
+/* ---------- order cards (Таны захиалгууд) ---------- */
+#orders{display:flex; flex-direction:column; gap:14px; padding:0 20px 40px;}
+
+.order-card{
+  background:var(--bg-card); border:1px solid var(--line); border-radius:16px;
+  padding:18px; display:flex; flex-direction:column; gap:6px;
+}
+.order-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;
+}
+.order-head b{font-size:.95rem; font-weight:800; letter-spacing:.01em;}
+
+.badge{
+  font-size:.68rem; font-weight:700; letter-spacing:.03em;
+  padding:5px 12px; border-radius:999px; white-space:nowrap;
+  background:var(--bg-card-2); border:1px solid var(--line); color:var(--muted);
+}
+.badge.status-registered{color:var(--teal); border-color:rgba(41,211,208,.4); background:rgba(41,211,208,.08);}
+.badge.status-transport,
+.badge.status-mongolia{color:#c9a6ff; border-color:rgba(201,166,255,.4); background:rgba(201,166,255,.08);}
+.badge.status-delivery{color:var(--pink); border-color:rgba(238,95,167,.4); background:rgba(238,95,167,.08);}
+.badge.status-delivered{color:#4ade80; border-color:rgba(74,222,128,.4); background:rgba(74,222,128,.08);}
+.badge.status-cancelled{color:#f87171; border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08);}
+
+.order-customer,.order-total,.order-items,.order-cargo{
+  font-size:.8rem; color:var(--muted); margin:0; line-height:1.5;
+}
+.order-total b{color:var(--ink); font-weight:800;}
+.order-cargo b{color:var(--ink);}
+
+.order-cancelled{
+  margin-top:8px; font-size:.78rem; font-weight:700; color:#f87171;
+  background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.3);
+  border-radius:10px; padding:10px; text-align:center;
+}
+
+/* progress track */
+.stage-track{
+  display:flex; align-items:flex-start; margin-top:12px; padding-top:4px;
+}
+.stage{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+  position:relative; text-align:center;
+}
+.stage::before{
+  content:""; position:absolute; top:5px; left:-50%; width:100%; height:2px;
+  background:var(--line); z-index:0;
+}
+.stage:first-child::before{display:none;}
+.stage.done::before{background:var(--grad);}
+.stage .dot{
+  width:12px; height:12px; border-radius:50%; background:var(--bg-card-2);
+  border:2px solid var(--line); z-index:1; transition:.2s;
+}
+.stage.done .dot{background:var(--grad); border-color:transparent;}
+.stage.current .dot{box-shadow:0 0 0 4px rgba(41,211,208,.18);}
+.stage .label{font-size:.6rem; color:var(--muted); letter-spacing:.01em; max-width:60px;}
+.stage.done .label{color:var(--ink); font-weight:600;}
+.stage.current .label{color:var(--teal); font-weight:700;}
+
+/* ---------- product cards (Бэлэн бараа grid) ---------- */
+.product{
+  background:var(--bg-card); border:1px solid var(--line); border-radius:14px;
+  padding:12px; display:flex; flex-direction:column; gap:6px;
+  transition:transform .2s,border-color .2s;
+}
+.product:hover{transform:translateY(-3px); border-color:var(--teal);}
+.product img{width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; background:var(--bg-card-2);}
+.product .p h3{font-size:.82rem; font-weight:700; margin:6px 0 2px; color:var(--ink);}
+.product .price{
+  font-weight:800; font-size:.85rem;
+  background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.product .stock{font-size:.68rem; color:var(--muted); margin:2px 0 8px;}
+.product .p button{
+  width:100%; padding:9px; border-radius:8px; border:0; cursor:pointer;
+  background:var(--grad); color:#0b0b0e; font-weight:700; font-size:.75rem;
+}
+
+/* ---------- cart items ---------- */
+.cart-item{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0; border-bottom:1px solid var(--line); font-size:.82rem;
+}
+.cart-item b{color:var(--ink);}
+#cartItems h3{font-size:.9rem; margin-top:12px; text-align:right;}
+
+/* ---------- generic admin-card (used in dashboard/products/settings tabs) ---------- */
+.admin-card{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:10px; font-size:.82rem; color:var(--muted);
+}
+.admin-card b{color:var(--ink);}
+.admin-card h2{font-size:1.3rem; margin-top:4px; color:var(--ink);}
+.admin-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;}
+.admin-row input,.admin-row select,#adminContent textarea{
+  flex:1; min-width:120px; padding:10px 12px; border-radius:8px;
+  border:1px solid var(--line); background:var(--bg-card); color:var(--ink); font-size:.78rem;
+}
+#adminContent textarea{width:100%; min-height:70px; margin-bottom:8px;}
+
+
+
