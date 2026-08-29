@@ -328,6 +328,26 @@ button.primary:active{opacity:.85;}
 }
 #adminContent textarea{width:100%; min-height:70px; margin-bottom:8px;}
 
+/* ---------- order success payment modal ---------- */
+.success-box{border-color:rgba(41,211,208,.35);}
+.success-code{
+  text-align:center; font-size:.72rem; color:var(--muted); letter-spacing:.05em;
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px; padding:14px;
+}
+.success-code b{
+  display:block; margin-top:4px; font-size:1.05rem;
+  background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.success-pay{background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px; padding:16px;}
+.success-label{font-size:.72rem; color:var(--muted); margin:0 0 12px; letter-spacing:.03em;}
+.success-bank{display:flex; flex-direction:column; gap:10px; margin-bottom:12px;}
+.success-bank > div{display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:8px; border-bottom:1px solid var(--line);}
+.success-bank > div:last-child{border-bottom:0; padding-bottom:0;}
+.success-bank span{font-size:.72rem; color:var(--muted);}
+.success-bank b{font-size:.88rem; color:var(--ink);}
+.success-note{font-size:.72rem; color:var(--muted); line-height:1.6; margin:0;}
+.success-note b{color:var(--pink);}
+
 /* ---------- cart fab ---------- */
 .cart-fab{
   position:fixed; right:18px; bottom:18px; z-index:50;
