@@ -12,7 +12,35 @@ function openCart(){$("cart").classList.remove("hidden");renderCart()} function 
 async function submitOrder(){if(!cart.length)return alert("Сагс хоосон байна.");const phone=$("customerPhone").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");const total=cart.reduce((s,x)=>s+x.price*x.qty,0);try{const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price}))})});alert("Захиалга амжилттай! Код: "+o.order_code);cart=[];closeCart();$("trackInput").value=phone;trackOrders()}catch(e){alert(e.message)}}
 function setTrack(mode,btn){trackMode=mode;document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$("trackInput").placeholder=mode==="phone"?"Утасны дугаараа оруулна уу":"Шилжүүлэг хийсэн дансны дугаараа оруулна уу"}
 async function trackOrders(){const phone=$("trackInput").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");try{const data=await api("/api/orders/by-phone?phone="+encodeURIComponent(phone));$("ordersSection").classList.remove("hidden");$("orders").innerHTML=data.length?data.map(orderCard).join(""):`<div class="admin-card">Энэ дугаараар захиалга олдсонгүй.</div>`;$("ordersSection").scrollIntoView({behavior:"smooth"})}catch(e){alert(e.message)}}
-function orderCard(o){const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);const stages=["registered","transport","mongolia","delivery","delivered"];const names={registered:"Бүртгэл",transport:"Тээвэр",mongolia:"Монголд",delivery:"Хүргэлт",delivered:"Дууссан"};return `<div class="admin-card"><b>${esc(o.order_code)}</b><p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p><p><b>${money(o.total)}</b> · Төлсөн: ${money(o.paid)}</p><p>${items.map(i=>esc(i.name)+" × "+i.qty).join(", ")}</p><span class="status">${names[o.status]||o.status}</span> · ${o.cargo_type==="air"?"✈️ Агаар 5-7 хоног":"🚚 Газар 14-16 хоног"} ${o.cargo_code?`· Код: <b>${esc(o.cargo_code)}</b>`:""}</div>`}
+
+function orderCard(o){
+  const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
+  const stages=["registered","transport","mongolia","delivery","delivered"];
+  const names={registered:"Бүртгэл",transport:"Тээвэр",mongolia:"Монголд",delivery:"Хүргэлт",delivered:"Дууссан"};
+  const isCancelled = o.status === "cancelled";
+  const idx = stages.indexOf(o.status);
+
+  const stageHtml = isCancelled
+    ? `<div class="order-cancelled">Захиалга цуцлагдсан</div>`
+    : `<div class="stage-track">${stages.map((s,i)=>`
+        <div class="stage ${i<=idx?'done':''} ${i===idx?'current':''}">
+          <span class="dot"></span>
+          <span class="label">${names[s]}</span>
+        </div>`).join("")}</div>`;
+
+  return `<div class="order-card">
+    <div class="order-head">
+      <b>${esc(o.order_code)}</b>
+      <span class="badge status-${o.status}">${names[o.status]||o.status}</span>
+    </div>
+    <p class="order-customer">${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p>
+    <p class="order-total"><b>${money(o.total)}</b> · Төлсөн: ${money(o.paid)}</p>
+    <p class="order-items">${items.map(i=>esc(i.name)+" × "+i.qty).join(", ")}</p>
+    <p class="order-cargo">${o.cargo_type==="air"?"✈️ Агаар 5-7 хоног":"🚚 Газар 14-16 хоног"} ${o.cargo_code?`· Код: <b>${esc(o.cargo_code)}</b>`:""}</p>
+    ${stageHtml}
+  </div>`;
+}
+
 function openAdmin(){$("adminModal").classList.remove("hidden");if(adminToken){$("adminLogin").classList.add("hidden");$("adminPanel").classList.remove("hidden");adminTab("dashboard")}}
 function closeAdmin(){$("adminModal").classList.add("hidden")}
 async function adminLogin(){try{const d=await api("/api/auth/admin",{method:"POST",body:JSON.stringify({phone:$("adminPhone").value,password:$("adminPassword").value})});adminToken=d.token;localStorage.setItem("moode_admin_token",adminToken);openAdmin()}catch(e){alert(e.message)}}
