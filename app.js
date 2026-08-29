@@ -1,9 +1,18 @@
-<!-- ============================================================
-  1) Replace the orderCard() function in app.js with this version.
-     (checkmark-circle timeline, no per-stage dates since the
-     backend doesn't currently store a timestamp per stage)
-============================================================= -->
-<script>
+let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", trackMode="phone";
+
+const $=id=>document.getElementById(id);
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
+function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
+async function init(){const s=await api("/api/settings");$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
+async function loadProducts(){products=await api("/api/products");$("products").innerHTML=products.length?products.map(p=>`<article class="product"><img src="${p.image||'https://placehold.co/600x600?text=MOODE+SEOUL'}"><div class="p"><h3>${esc(p.name)}</h3><div class="price">${money(p.price)}</div><div class="stock">${p.stock>0?"Бэлэн: "+p.stock:"Захиалгаар"}</div><button onclick="addCart(${p.id})">Сагсанд нэмэх</button></div></article>`).join(""):`<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function addCart(id){const p=products.find(x=>x.id==id);if(!p)return;const x=cart.find(i=>i.id==id);x?x.qty++:cart.push({...p,qty:1});renderCart();openCart()}
+function renderCart(){$("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);$("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cart-item"><span>${esc(x.name)} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`:`<p>Сагс хоосон байна.</p>`}
+function openCart(){$("cart").classList.remove("hidden");renderCart()} function closeCart(){$("cart").classList.add("hidden")}
+async function submitOrder(){if(!cart.length)return alert("Сагс хоосон байна.");const phone=$("customerPhone").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");const total=cart.reduce((s,x)=>s+x.price*x.qty,0);try{const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price}))})});alert("Захиалга амжилттай! Код: "+o.order_code);cart=[];closeCart();$("trackInput").value=phone;trackOrders()}catch(e){alert(e.message)}}
+function setTrack(mode,btn){trackMode=mode;document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$("trackInput").placeholder=mode==="phone"?"Утасны дугаараа оруулна уу":"Шилжүүлэг хийсэн дансны дугаараа оруулна уу"}
+async function trackOrders(){const phone=$("trackInput").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");try{const data=await api("/api/orders/by-phone?phone="+encodeURIComponent(phone));$("ordersSection").classList.remove("hidden");$("orders").innerHTML=data.length?data.map(orderCard).join(""):`<div class="admin-card">Энэ дугаараар захиалга олдсонгүй.</div>`;$("ordersSection").scrollIntoView({behavior:"smooth"})}catch(e){alert(e.message)}}
+
 function orderCard(o){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const stages=["registered","transport","mongolia","delivery","delivered"];
@@ -42,84 +51,17 @@ function orderCard(o){
     ${stageHtml}
   </div>`;
 }
-</script>
 
-<!-- ============================================================
-  2) Replace the existing <section class="info">...</section>
-     block in index.html with everything below.
-============================================================= -->
-
-<section class="flow">
-  <h2 class="flow-title">ЗАХИАЛГА ӨГӨХ ЯВЦ</h2>
-  <div class="flow-grid">
-    <div class="flow-card">
-      <div class="flow-icon">📋</div>
-      <b>1. Бараагаа сонгоно</b>
-      <p>Солонгос дэлгүүр, сайтнаас сонгоно</p>
-    </div>
-    <div class="flow-card">
-      <div class="flow-icon">🛒</div>
-      <b>2. Захиалга илгээнэ</b>
-      <p>Барааны линк, размер, тоо хэмжээ илгээнэ</p>
-    </div>
-    <div class="flow-card">
-      <div class="flow-icon">📦</div>
-      <b>3. Төлбөрөө баталгаажуулна</b>
-      <p>Барааны үнэ + хүргэлт төлбөр төлнө</p>
-    </div>
-    <div class="flow-card">
-      <div class="flow-icon">🚚</div>
-      <b>4. Каргонд өгсөн кодоо авна</b>
-      <p>Каргонд өгсөн дараа код олгоно</p>
-    </div>
-    <div class="flow-card">
-      <div class="flow-icon">📮</div>
-      <b>5. Карго таныг холбож барааг өгнө</b>
-      <p>Монголд ирээд карго тантай холбогдоно</p>
-    </div>
-  </div>
-</section>
-
-<section class="pay-grid">
-  <div class="pay-methods">
-    <h3>ТӨЛБӨРИЙН ТӨРЛҮҮД</h3>
-    <div class="pay-row"><span class="pay-ic">🏦</span><div><b>Банкны данс</b><small>Хаан банк, Голомт банк</small></div><span class="arrow">›</span></div>
-    <div class="pay-row"><span class="pay-ic">Ⓠ</span><div><b>QPay</b><small>QPay апп-аар төлнө</small></div><span class="arrow">›</span></div>
-    <div class="pay-row"><span class="pay-ic">⋯</span><div><b>Бусад</b><small>Гүйлгээний баримт илгээнэ үү</small></div><span class="arrow">›</span></div>
-  </div>
-  <div class="pay-info">
-    <h3>ТӨЛБӨРИЙН МЭДЭЭЛЭЛ</h3>
-    <div class="pay-note">
-      <span>ℹ️</span>
-      <p><b>Анхааруулга</b><br>Барааны төлбөрийг урьдчилж баталгаажуулна. Каргоны төлбөр тусдаа бөгөөд бараагаа авахдаа каргонд төлнө.</p>
-    </div>
-    <p class="pay-check">✓ Төлбөр хийсэн дараа баримтаа илгээнэ үү</p>
-    <p class="pay-check">✓ Захиалга баталгаажсаны дараа цуцлах боломжгүй</p>
-  </div>
-</section>
-
-<footer class="site-footer">
-  <div class="footer-grid">
-    <div>
-      <b class="footer-logo">MOODE SEOUL</b>
-      <p>Солонгосоос Монголдоо итгэлтэй, хурдан, найдвартай.</p>
-      <div class="footer-social">
-        <a href="#">📷</a><a href="#">🎵</a><a href="#">✈️</a><a href="#">📘</a>
-      </div>
-    </div>
-    <div>
-      <b>ЦЭС</b>
-      <a href="#">Нүүр</a>
-      <a href="#">Миний захиалга</a>
-      <a href="#">FAQ</a>
-      <a href="#">Холбоо барих</a>
-    </div>
-    <div>
-      <b>ХОЛБОО БАРИХ</b>
-      <a href="tel:+9767288-3815">📞 (976) 7288-3815</a>
-      <a href="#">✈️ @moodeseoul</a>
-      <a href="mailto:moodeseoul@gmail.com">✉️ moodeseoul@gmail.com</a>
-    </div>
-  </div>
-  <div class="footer-bottom">© 2026 MOODE SEOUL. Бүх эрх хуулиар хамгаалагдсан.</div>
-</footer>
+function openAdmin(){$("adminModal").classList.remove("hidden");if(adminToken){$("adminLogin").classList.add("hidden");$("adminPanel").classList.remove("hidden");adminTab("dashboard")}}
+function closeAdmin(){$("adminModal").classList.add("hidden")}
+async function adminLogin(){try{const d=await api("/api/auth/admin",{method:"POST",body:JSON.stringify({phone:$("adminPhone").value,password:$("adminPassword").value})});adminToken=d.token;localStorage.setItem("moode_admin_token",adminToken);openAdmin()}catch(e){alert(e.message)}}
+async function adminTab(tab){try{if(tab==="dashboard"){const s=await api("/api/admin/stats");$("adminContent").innerHTML=`<h2>Хяналтын самбар</h2><div class="grid"><div class="admin-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div><div class="admin-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div><div class="admin-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div><div class="admin-card"><b>Төлөгдсөн</b><h2>${money(s.revenue)}</h2></div></div>`}
+if(tab==="products"){const ps=await api("/api/admin/products");$("adminContent").innerHTML=`<h2>Бараа удирдах</h2><div class="admin-card"><div class="admin-row"><input id="pn" placeholder="Барааны нэр"><input id="pp" type="number" placeholder="Үнэ"><input id="pst" type="number" placeholder="Тоо"><input id="pc" placeholder="Ангилал"></div><input id="pi" placeholder="Зургийн URL (эсвэл /uploads/...)" ><textarea id="pd" placeholder="Тайлбар"></textarea><button class="primary" onclick="addProduct()">Бараа нэмэх</button></div>${ps.map(p=>`<div class="admin-card"><b>${esc(p.name)}</b> — ${money(p.price)} — үлдэгдэл ${p.stock}<br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button></div>`).join("")}`}
+if(tab==="orders"){const os=await api("/api/admin/orders");$("adminContent").innerHTML=`<h2>Захиалга удирдах</h2>${os.map(o=>`<div class="admin-card"><b>${esc(o.order_code)}</b><p>${esc(o.customer_phone)} · ${money(o.total)} · төлсөн ${money(o.paid)}</p><div class="admin-row"><select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${s}</option>`).join("")}</select><input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн"><input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код"><input id="addr${o.id}" value="${esc(o.address||"")}" placeholder="Хүргэлтийн хаяг"></div><button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button></div>`).join("")}`}
+if(tab==="settings"){const s=await api("/api/admin/settings");$("adminContent").innerHTML=`<h2>Дэлгүүрийн тохиргоо</h2><div class="admin-row"><input id="sn" value="${esc(s.storeName)}" placeholder="Нэр"><input id="sphone" value="${esc(s.phone)}" placeholder="Утас"><input id="air" value="${esc(s.airCargo)}" placeholder="Агаар"><input id="ground" value="${esc(s.groundCargo)}" placeholder="Газар"><input id="bank" value="${esc(s.bankName)}" placeholder="Банк"><input id="acct" value="${esc(s.bankAccount)}" placeholder="Данс"><input id="holder" value="${esc(s.bankHolder)}" placeholder="Данс эзэмшигч"><input id="ig" value="${esc(s.instagram)}" placeholder="Instagram"><input id="fb" value="${esc(s.facebook)}" placeholder="Facebook"></div><textarea id="ann">${esc(s.announcement)}</textarea><button class="primary" onclick="saveSettings()">Хадгалах</button><h3>Odoo</h3><p>Railway-ийн Variables хэсэгт ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, ODOO_ENABLED=true тохируулж болно.</p>`}}catch(e){alert(e.message)}}
+async function addProduct(){await api("/api/admin/products",{method:"POST",body:JSON.stringify({name:$("pn").value,price:$("pp").value,stock:$("pst").value,category:$("pc").value,image:$("pi").value,description:$("pd").value})});adminTab("products");loadProducts()}
+async function editProduct(id){const p=(await api("/api/admin/products")).find(x=>x.id==id);if(!p)return;const name=prompt("Барааны нэр",p.name);if(name===null)return;const price=prompt("Үнэ",p.price);const stock=prompt("Үлдэгдэл",p.stock);const image=prompt("Зураг URL",p.image||"");await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,stock,image})});adminTab("products");loadProducts()}
+async function deleteProduct(id){if(!confirm("Устгах уу?"))return;await api("/api/admin/products/"+id,{method:"DELETE"});adminTab("products");loadProducts()}
+async function saveOrder(id){await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status:$("st"+id).value,paid:$("paid"+id).value,cargo_code:$("cargo"+id).value,address:$("addr"+id).value})});alert("Захиалга шинэчлэгдлээ");adminTab("orders")}
+async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,airCargo:$("air").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
+init().catch(console.error);renderCart();
