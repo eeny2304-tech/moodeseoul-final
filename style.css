@@ -248,12 +248,24 @@ button.primary:active{opacity:.85;}
 .pay-row{
   display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px;
   background:var(--bg-card-2); border:1px solid var(--line); margin-bottom:10px;
+  cursor:pointer; transition:border-color .2s;
 }
-.pay-ic{width:34px; height:34px; border-radius:8px; background:var(--bg-card); display:flex; align-items:center; justify-content:center;}
+.pay-row:hover{border-color:var(--teal);}
+.pay-row.open{border-color:var(--teal);}
+.pay-ic{width:34px; height:34px; border-radius:8px; background:var(--bg-card); display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
 .pay-row div{flex:1;}
 .pay-row b{display:block; font-size:.82rem; color:var(--ink);}
 .pay-row small{font-size:.68rem; color:var(--muted);}
-.pay-row .arrow{color:var(--muted); font-size:1.2rem;}
+.pay-row .arrow{color:var(--muted); font-size:1.2rem; transition:transform .2s;}
+.pay-row.open .arrow{transform:rotate(90deg); color:var(--teal);}
+
+.pay-detail{
+  margin:-2px 0 12px; padding:2px; overflow:hidden;
+}
+.pay-detail .success-bank{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px; padding:14px;
+  display:flex; flex-direction:column; gap:10px;
+}
 
 .pay-note{
   display:flex; gap:10px; background:rgba(41,211,208,.08); border:1px solid rgba(41,211,208,.3);
@@ -347,6 +359,7 @@ button.primary:active{opacity:.85;}
 .success-bank b{font-size:.88rem; color:var(--ink);}
 .success-note{font-size:.72rem; color:var(--muted); line-height:1.6; margin:0;}
 .success-note b{color:var(--pink);}
+.pay-detail .success-bank{margin-bottom:0;}
 
 /* ---------- cart fab ---------- */
 .cart-fab{
