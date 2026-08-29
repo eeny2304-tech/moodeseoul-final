@@ -1,15 +1,39 @@
-let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", trackMode="phone";
+let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", trackMode="phone", settings={};
 
 const $=id=>document.getElementById(id);
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
-async function init(){const s=await api("/api/settings");$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
+async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
 async function loadProducts(){products=await api("/api/products");$("products").innerHTML=products.length?products.map(p=>`<article class="product"><img src="${p.image||'https://placehold.co/600x600?text=MOODE+SEOUL'}"><div class="p"><h3>${esc(p.name)}</h3><div class="price">${money(p.price)}</div><div class="stock">${p.stock>0?"Бэлэн: "+p.stock:"Захиалгаар"}</div><button onclick="addCart(${p.id})">Сагсанд нэмэх</button></div></article>`).join(""):`<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function addCart(id){const p=products.find(x=>x.id==id);if(!p)return;const x=cart.find(i=>i.id==id);x?x.qty++:cart.push({...p,qty:1});renderCart();openCart()}
 function renderCart(){$("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);$("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cart-item"><span>${esc(x.name)} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`:`<p>Сагс хоосон байна.</p>`}
 function openCart(){$("cart").classList.remove("hidden");renderCart()} function closeCart(){$("cart").classList.add("hidden")}
-async function submitOrder(){if(!cart.length)return alert("Сагс хоосон байна.");const phone=$("customerPhone").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");const total=cart.reduce((s,x)=>s+x.price*x.qty,0);try{const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price}))})});alert("Захиалга амжилттай! Код: "+o.order_code);cart=[];closeCart();$("trackInput").value=phone;trackOrders()}catch(e){alert(e.message)}}
+
+async function submitOrder(){
+  if(!cart.length)return alert("Сагс хоосон байна.");
+  const phone=$("customerPhone").value.trim();
+  if(!phone)return alert("Утасны дугаараа оруулна уу.");
+  const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  try{
+    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price}))})});
+    cart=[];
+    closeCart();
+    $("trackInput").value=phone;
+    showOrderSuccess(o.order_code);
+    trackOrders();
+  }catch(e){alert(e.message)}
+}
+
+function showOrderSuccess(code){
+  $("successCode").textContent=code;
+  $("successBankName").textContent=settings.bankName||"—";
+  $("successBankAccount").textContent=settings.bankAccount||"—";
+  $("successBankHolder").textContent=settings.bankHolder||"—";
+  $("orderSuccessModal").classList.remove("hidden");
+}
+function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
+
 function setTrack(mode,btn){trackMode=mode;document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$("trackInput").placeholder=mode==="phone"?"Утасны дугаараа оруулна уу":"Шилжүүлэг хийсэн дансны дугаараа оруулна уу"}
 async function trackOrders(){const phone=$("trackInput").value.trim();if(!phone)return alert("Утасны дугаараа оруулна уу.");try{const data=await api("/api/orders/by-phone?phone="+encodeURIComponent(phone));$("ordersSection").classList.remove("hidden");$("orders").innerHTML=data.length?data.map(orderCard).join(""):`<div class="admin-card">Энэ дугаараар захиалга олдсонгүй.</div>`;$("ordersSection").scrollIntoView({behavior:"smooth"})}catch(e){alert(e.message)}}
 
