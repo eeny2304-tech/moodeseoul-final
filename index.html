@@ -81,6 +81,23 @@
 
 <div id="cart" class="drawer hidden"><div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div><div id="cartItems"></div><input id="customerName" placeholder="Нэр"><input id="customerPhone" placeholder="Утасны дугаар"><input id="customerAddress" placeholder="Хаяг"><select id="cargoType"><option value="air">Агаар — 5-7 хоног</option><option value="ground">Газар — 14-16 хоног</option></select><button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button></div>
 
+<div id="orderSuccessModal" class="modal hidden">
+  <div class="admin-box success-box">
+    <div class="drawer-head"><h2>✅ Захиалга баталгаажлаа</h2><button onclick="closeOrderSuccess()">×</button></div>
+    <p class="success-code">Захиалгын код<br><b id="successCode"></b></p>
+    <div class="success-pay">
+      <p class="success-label">Дараах дансаар төлбөрөө шилжүүлнэ үү</p>
+      <div class="success-bank">
+        <div><span>Банк</span><b id="successBankName">—</b></div>
+        <div><span>Дансны дугаар</span><b id="successBankAccount">—</b></div>
+        <div><span>Хүлээн авагч</span><b id="successBankHolder">—</b></div>
+      </div>
+      <p class="success-note">Гүйлгээний утга дээр <b>утасны дугаар</b> болон <b>захиалгын кодоо</b> заавал бичиж төлбөрөө шилжүүлнэ үү.</p>
+    </div>
+    <button class="primary" onclick="closeOrderSuccess()">Ойлголоо</button>
+  </div>
+</div>
+
 <div id="adminModal" class="modal hidden"><div class="admin-box"><div class="drawer-head"><h2>Admin</h2><button onclick="closeAdmin()">×</button></div><div id="adminLogin"><input id="adminPhone" placeholder="Утас"><input id="adminPassword" type="password" placeholder="Нууц үг"><button class="primary" onclick="adminLogin()">Нэвтрэх</button></div><div id="adminPanel" class="hidden"><div class="admin-nav"><button onclick="adminTab('dashboard')">Хянах</button><button onclick="adminTab('products')">Бараа</button><button onclick="adminTab('orders')">Захиалга</button><button onclick="adminTab('settings')">Тохиргоо</button></div><div id="adminContent"></div></div></div></div>
 
 <button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
