@@ -63,10 +63,20 @@
 <section class="pay-grid">
   <div class="pay-methods">
     <h3>ТӨЛБӨРИЙН ТӨРЛҮҮД</h3>
-    <div class="pay-row">
+
+    <div class="pay-row" id="bankRow" onclick="togglePayDetail()">
       <span class="pay-ic">🏦</span>
-      <div><b>Хаан банк</b><small>MN050005005071274473 · Ганболд Энхцацралт</small></div>
+      <div><b>Банкны данс</b><small>Дарж дэлгэрэнгүй харах</small></div>
+      <span class="arrow">›</span>
     </div>
+    <div class="pay-detail hidden" id="bankDetail">
+      <div class="success-bank">
+        <div><span>Банк</span><b>Хаан банк</b></div>
+        <div><span>Дансны дугаар</span><b>MN050005005071274473</b></div>
+        <div><span>Хүлээн авагч</span><b>Ганболд Энхцацралт</b></div>
+      </div>
+    </div>
+
     <div class="pay-row"><span class="pay-ic">⋯</span><div><b>Бусад</b><small>Гүйлгээний баримт илгээнэ үү</small></div><span class="arrow">›</span></div>
   </div>
   <div class="pay-info">
