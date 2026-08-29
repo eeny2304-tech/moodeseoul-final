@@ -10,6 +10,11 @@ function addCart(id){const p=products.find(x=>x.id==id);if(!p)return;const x=car
 function renderCart(){$("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);$("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cart-item"><span>${esc(x.name)} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`:`<p>Сагс хоосон байна.</p>`}
 function openCart(){$("cart").classList.remove("hidden");renderCart()} function closeCart(){$("cart").classList.add("hidden")}
 
+function togglePayDetail(){
+  $("bankDetail").classList.toggle("hidden");
+  $("bankRow").classList.toggle("open");
+}
+
 async function submitOrder(){
   if(!cart.length)return alert("Сагс хоосон байна.");
   const phone=$("customerPhone").value.trim();
