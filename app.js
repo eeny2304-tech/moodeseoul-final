@@ -337,9 +337,33 @@ async function editProduct(id){
   const p=(await api("/api/admin/products")).find(x=>x.id==id); if(!p)return;
   const name=prompt("Барааны нэр",p.name); if(name===null)return;
   const price=prompt("Үнэ",p.price);
-  const stock=prompt("Ерөнхий тоо (зөвхөн хэмжээгүй бол хэрэглэгдэнэ)",p.stock);
   const image=prompt("Зураг URL",p.image||"");
-  await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,stock,image,sizes:p.sizes||[]})});
+
+  let sizes=p.sizes||[];
+  if(sizes.length){
+    const newSizes=[];
+    for(const s of sizes){
+      const qty=prompt(`"${s.size}" хэмжээний шинэ тоо ширхэг`, s.qty);
+      if(qty===null) return; // cancelled — abort without saving
+      newSizes.push({size:s.size, qty:Number(qty)||0});
+    }
+    const addMore=confirm("Шинэ хэмжээ нэмэх үү?");
+    if(addMore){
+      let addingMore=true;
+      while(addingMore){
+        const sizeName=prompt("Шинэ хэмжээ (жиш: 43)");
+        if(!sizeName) break;
+        const qty=prompt(`"${sizeName}" хэмжээний тоо ширхэг`,"0");
+        newSizes.push({size:sizeName, qty:Number(qty)||0});
+        addingMore=confirm("Дахин нэг хэмжээ нэмэх үү?");
+      }
+    }
+    sizes=newSizes;
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,sizes})});
+  } else {
+    const stock=prompt("Тоо ширхэг",p.stock);
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,stock,sizes:[]})});
+  }
   adminTab("products"); loadProducts();
 }
 async function deleteProduct(id){if(!confirm("Устгах уу?"))return;await api("/api/admin/products/"+id,{method:"DELETE"});adminTab("products");loadProducts()}
