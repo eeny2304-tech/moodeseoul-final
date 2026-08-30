@@ -1,3 +1,4 @@
+
 let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", trackMode="phone", settings={};
 let myOrders=[];
 
@@ -59,6 +60,17 @@ function togglePayDetail(){
   $("bankDetail").classList.toggle("hidden");
   $("bankRow").classList.toggle("open");
 }
+
+/* ---------------- Footer menu links ---------------- */
+function scrollToTop(e){ if(e) e.preventDefault(); window.scrollTo({top:0,behavior:"smooth"}); }
+function scrollToMyOrders(e){
+  if(e) e.preventDefault();
+  document.querySelector(".track").scrollIntoView({behavior:"smooth"});
+  setTimeout(()=>$("trackInput").focus(), 400);
+}
+function scrollToContact(e){ if(e) e.preventDefault(); $("contactBlock").scrollIntoView({behavior:"smooth"}); }
+function openFaq(e){ if(e) e.preventDefault(); $("faqModal").classList.remove("hidden"); }
+function closeFaq(){ $("faqModal").classList.add("hidden"); }
 
 async function submitOrder(){
   if(!cart.length)return alert("Сагс хоосон байна.");
