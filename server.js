@@ -7,6 +7,9 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 
+let XLSX;
+try { XLSX = require("xlsx"); } catch (e) { XLSX = null; }
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
@@ -201,12 +204,18 @@ async function updateOrder(id,p) {
     [p.customer_name??current.customer_name,Number(p.paid??current.paid),p.cargo_type??current.cargo_type,p.cargo_code??current.cargo_code,p.status??current.status,p.address??current.address,p.note??current.note,JSON.stringify(p.items??current.items),Number(p.total??current.total),id])).rows[0];
 }
 
+async function listCustomers() {
+  if (!usePostgres) return loadJson().customers.slice().reverse();
+  return (await pool.query("SELECT * FROM customers ORDER BY created_at DESC")).rows;
+}
+
 const upload = multer({ storage: multer.diskStorage({
   destination: (_,__,cb)=>cb(null,UPLOAD_DIR),
   filename: (_,file,cb)=>cb(null, Date.now()+"-"+file.originalname.replace(/[^a-zA-Z0-9._-]/g,""))
 })});
+const importUpload = multer({ storage: multer.memoryStorage() });
 
-app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgres":"local-json"}));
+app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgres":"local-json", xlsx: !!XLSX}));
 app.get("/api/settings", async (_,res)=>res.json(await getSettings()));
 app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
 
@@ -307,11 +316,85 @@ app.put("/api/admin/orders/:id", auth("admin"), async (req,res)=>res.json(await 
 app.get("/api/admin/settings", auth("admin"), async (_,res)=>res.json(await getSettings()));
 app.put("/api/admin/settings", auth("admin"), async (req,res)=>res.json(await setSettings(req.body)));
 
+app.get("/api/admin/customers", auth("admin"), async (_,res)=>res.json(await listCustomers()));
+
 app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
   const orders=await allOrders();
   const products=await listProducts(true);
   const revenue=orders.reduce((s,o)=>s+Number(o.paid||0),0);
-  res.json({orders:orders.length,active:orders.filter(o=>!["delivered","cancelled"].includes(o.status)).length,delivered:orders.filter(o=>o.status==="delivered").length,revenue,products:products.length});
+
+  const monthlyMap = {};
+  for (const o of orders) {
+    const d = new Date(o.created_at);
+    if (isNaN(d)) continue;
+    const key = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+    monthlyMap[key] = (monthlyMap[key] || 0) + Number(o.paid || 0);
+  }
+  const monthly = Object.entries(monthlyMap)
+    .sort((a,b) => a[0] < b[0] ? 1 : -1)
+    .slice(0, 6)
+    .reverse()
+    .map(([month, total]) => ({ month, total }));
+
+  res.json({
+    orders: orders.length,
+    active: orders.filter(o=>!["delivered","cancelled"].includes(o.status)).length,
+    delivered: orders.filter(o=>o.status==="delivered").length,
+    revenue,
+    products: products.length,
+    monthly
+  });
+});
+
+// Bulk order import from an Excel (.xlsx) file exported from Facebook order tracking.
+// Expected column headers (Mongolian or English, case-insensitive): Утас/Phone, Нэр/Name,
+// Карго/Cargo, Бараа/Product, Үнэ/Price
+app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"), async (req,res)=>{
+  if (!XLSX) {
+    return res.status(500).json({ error: "Серверт 'xlsx' сан суулгаагүй байна. package.json-д \"xlsx\": \"^0.18.5\" нэмээд дахин deploy хийнэ үү." });
+  }
+  if (!req.file) return res.status(400).json({ error: "Excel файл сонгоно уу" });
+
+  try {
+    const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    const pick = (row, keys) => {
+      for (const k of Object.keys(row)) {
+        if (keys.includes(k.trim().toLowerCase())) return row[k];
+      }
+      return "";
+    };
+
+    let imported = 0, skipped = 0;
+    const results = [];
+    for (const row of rows) {
+      const phone = String(pick(row, ["утас","phone","утасны дугаар"])).trim();
+      const name = String(pick(row, ["нэр","name"])).trim();
+      const cargo_code = String(pick(row, ["карго","cargo","карго код"])).trim();
+      const productName = String(pick(row, ["бараа","product","барааны нэр"])).trim();
+      const price = Number(pick(row, ["үнэ","price","барааны үнэ"])) || 0;
+
+      if (!phone) { skipped++; continue; }
+
+      const order = await createOrder({
+        customer_phone: phone,
+        customer_name: name,
+        items: [{ name: productName || "Бараа", qty: 1, price }],
+        total: price,
+        cargo_type: "air",
+        cargo_code,
+        address: "",
+        note: "Excel-ээс импортлосон (FB захиалга)"
+      });
+      imported++;
+      results.push(order.order_code);
+    }
+    res.json({ imported, skipped, order_codes: results });
+  } catch (e) {
+    res.status(500).json({ error: "Файл унших алдаа: " + e.message });
+  }
 });
 
 app.get("/api/admin/odoo-status", auth("admin"), async (_,res)=>{
