@@ -81,16 +81,157 @@ function orderCard(o){
   </div>`;
 }
 
+/* ---------------- Admin ---------------- */
+
 function openAdmin(){$("adminModal").classList.remove("hidden");if(adminToken){$("adminLogin").classList.add("hidden");$("adminPanel").classList.remove("hidden");adminTab("dashboard")}}
 function closeAdmin(){$("adminModal").classList.add("hidden")}
 async function adminLogin(){try{const d=await api("/api/auth/admin",{method:"POST",body:JSON.stringify({phone:$("adminPhone").value,password:$("adminPassword").value})});adminToken=d.token;localStorage.setItem("moode_admin_token",adminToken);openAdmin()}catch(e){alert(e.message)}}
-async function adminTab(tab){try{if(tab==="dashboard"){const s=await api("/api/admin/stats");$("adminContent").innerHTML=`<h2>Хяналтын самбар</h2><div class="grid"><div class="admin-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div><div class="admin-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div><div class="admin-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div><div class="admin-card"><b>Төлөгдсөн</b><h2>${money(s.revenue)}</h2></div></div>`}
-if(tab==="products"){const ps=await api("/api/admin/products");$("adminContent").innerHTML=`<h2>Бараа удирдах</h2><div class="admin-card"><div class="admin-row"><input id="pn" placeholder="Барааны нэр"><input id="pp" type="number" placeholder="Үнэ"><input id="pst" type="number" placeholder="Тоо"><input id="pc" placeholder="Ангилал"></div><input id="pi" placeholder="Зургийн URL (эсвэл /uploads/...)" ><textarea id="pd" placeholder="Тайлбар"></textarea><button class="primary" onclick="addProduct()">Бараа нэмэх</button></div>${ps.map(p=>`<div class="admin-card"><b>${esc(p.name)}</b> — ${money(p.price)} — үлдэгдэл ${p.stock}<br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button></div>`).join("")}`}
-if(tab==="orders"){const os=await api("/api/admin/orders");$("adminContent").innerHTML=`<h2>Захиалга удирдах</h2>${os.map(o=>`<div class="admin-card"><b>${esc(o.order_code)}</b><p>${esc(o.customer_phone)} · ${money(o.total)} · төлсөн ${money(o.paid)}</p><div class="admin-row"><select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${s}</option>`).join("")}</select><input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн"><input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код"><input id="addr${o.id}" value="${esc(o.address||"")}" placeholder="Хүргэлтийн хаяг"></div><button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button></div>`).join("")}`}
-if(tab==="settings"){const s=await api("/api/admin/settings");$("adminContent").innerHTML=`<h2>Дэлгүүрийн тохиргоо</h2><div class="admin-row"><input id="sn" value="${esc(s.storeName)}" placeholder="Нэр"><input id="sphone" value="${esc(s.phone)}" placeholder="Утас"><input id="air" value="${esc(s.airCargo)}" placeholder="Агаар"><input id="ground" value="${esc(s.groundCargo)}" placeholder="Газар"><input id="bank" value="${esc(s.bankName)}" placeholder="Банк"><input id="acct" value="${esc(s.bankAccount)}" placeholder="Данс"><input id="holder" value="${esc(s.bankHolder)}" placeholder="Данс эзэмшигч"><input id="ig" value="${esc(s.instagram)}" placeholder="Instagram"><input id="fb" value="${esc(s.facebook)}" placeholder="Facebook"></div><textarea id="ann">${esc(s.announcement)}</textarea><button class="primary" onclick="saveSettings()">Хадгалах</button><h3>Odoo</h3><p>Railway-ийн Variables хэсэгт ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, ODOO_ENABLED=true тохируулж болно.</p>`}}catch(e){alert(e.message)}}
+
+const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
+
+async function adminTab(tab){
+  document.querySelectorAll(".admin-nav button").forEach(b=>b.classList.remove("active"));
+  const btnMap={dashboard:0,products:1,orders:2,customers:3,settings:4};
+  const navBtns=document.querySelectorAll(".admin-nav button");
+  if(navBtns[btnMap[tab]]) navBtns[btnMap[tab]].classList.add("active");
+
+  try{
+    if(tab==="dashboard"){
+      const s=await api("/api/admin/stats");
+      const monthlyHtml=(s.monthly||[]).length
+        ? s.monthly.map(m=>{const [y,mo]=m.month.split("-");return `<div class="month-row"><span>${mo}/${y}</span><b>${money(m.total)}</b></div>`}).join("")
+        : `<p class="muted-note">Мэдээлэл алга байна.</p>`;
+      $("adminContent").innerHTML=`<h2>Хяналтын самбар</h2>
+        <div class="grid">
+          <div class="admin-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div>
+          <div class="admin-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div>
+          <div class="admin-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div>
+          <div class="admin-card"><b>Төлөгдсөн</b><h2>${money(s.revenue)}</h2></div>
+        </div>
+        <h3 class="section-sub">Сарын борлуулалт</h3>
+        <div class="admin-card month-list">${monthlyHtml}</div>`;
+    }
+
+    if(tab==="products"){
+      const ps=await api("/api/admin/products");
+      $("adminContent").innerHTML=`<h2>Бараа удирдах</h2>
+        <div class="admin-card">
+          <div class="admin-row">
+            <input id="pn" placeholder="Барааны нэр">
+            <input id="pp" type="number" placeholder="Үнэ">
+            <input id="pst" type="number" placeholder="Тоо">
+            <select id="pc">
+              <option value="mn_belen">Монголд бэлэн</option>
+              <option value="kr_belen">Солонгост бэлэн</option>
+              <option value="order">Захиалгийн бараа</option>
+            </select>
+          </div>
+          <label class="file-btn">📷 Зураг сонгох (утаснаас)<input type="file" id="pi_file" accept="image/*" onchange="uploadProductImage(this)"></label>
+          <input type="hidden" id="pi">
+          <div id="pi_preview" class="img-preview"></div>
+          <textarea id="pd" placeholder="Тайлбар"></textarea>
+          <button class="primary" onclick="addProduct()">Бараа нэмэх</button>
+        </div>
+        ${ps.map(p=>`<div class="admin-card admin-card-row">
+            ${p.image?`<img class="admin-thumb" src="${p.image}">`:`<div class="admin-thumb admin-thumb-empty">MS</div>`}
+            <div>
+              <b>${esc(p.name)}</b> — ${money(p.price)} — үлдэгдэл ${p.stock}<br>
+              <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}</small><br>
+              <button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+            </div>
+          </div>`).join("")}`;
+    }
+
+    if(tab==="orders"){
+      const os=await api("/api/admin/orders");
+      window.__allOrders=os;
+      $("adminContent").innerHTML=`<h2>Захиалга удирдах</h2>
+        <div class="admin-row">
+          <input id="orderSearch" placeholder="Утас, нэр, захиалгын кодоор хайх" oninput="filterOrdersAdmin()">
+        </div>
+        <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
+        <p class="muted-note">Excel баганууд: Утас, Нэр, Карго, Бараа, Үнэ</p>
+        <div id="ordersAdminList"></div>`;
+      renderOrdersAdminList(os);
+    }
+
+    if(tab==="customers"){
+      const cs=await api("/api/admin/customers");
+      $("adminContent").innerHTML=`<h2>Хэрэглэгчид</h2>
+        <div class="admin-row">
+          <input id="custSearch" placeholder="Утас, нэрээр хайх" oninput="filterCustomers()">
+        </div>
+        <div id="customersList">${cs.length?cs.map(c=>`<div class="admin-card"><b>${esc(c.name||"Нэргүй")}</b><br>${esc(c.phone)}</div>`).join(""):`<p class="muted-note">Хэрэглэгч алга байна.</p>`}</div>`;
+      window.__allCustomers=cs;
+    }
+
+    if(tab==="settings"){
+      const s=await api("/api/admin/settings");
+      $("adminContent").innerHTML=`<h2>Дэлгүүрийн тохиргоо</h2><div class="admin-row"><input id="sn" value="${esc(s.storeName)}" placeholder="Нэр"><input id="sphone" value="${esc(s.phone)}" placeholder="Утас"><input id="air" value="${esc(s.airCargo)}" placeholder="Агаар"><input id="ground" value="${esc(s.groundCargo)}" placeholder="Газар"><input id="bank" value="${esc(s.bankName)}" placeholder="Банк"><input id="acct" value="${esc(s.bankAccount)}" placeholder="Данс"><input id="holder" value="${esc(s.bankHolder)}" placeholder="Данс эзэмшигч"><input id="ig" value="${esc(s.instagram)}" placeholder="Instagram"><input id="fb" value="${esc(s.facebook)}" placeholder="Facebook"></div><textarea id="ann">${esc(s.announcement)}</textarea><button class="primary" onclick="saveSettings()">Хадгалах</button><h3>Odoo</h3><p>Railway-ийн Variables хэсэгт ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, ODOO_ENABLED=true тохируулж болно.</p>`;
+    }
+  }catch(e){alert(e.message)}
+}
+
+async function uploadProductImage(input){
+  const file=input.files[0]; if(!file) return;
+  const fd=new FormData(); fd.append("image",file);
+  try{
+    const r=await fetch("/api/admin/upload",{method:"POST",headers:{Authorization:"Bearer "+adminToken},body:fd});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||"Зураг оруулахад алдаа гарлаа");
+    $("pi").value=d.url;
+    $("pi_preview").innerHTML=`<img src="${d.url}">`;
+  }catch(e){alert(e.message)}
+}
+
+function renderOrdersAdminList(os){
+  $("ordersAdminList").innerHTML = os.length ? os.map(o=>`<div class="admin-card">
+      <b>${esc(o.order_code)}</b>
+      <p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)} · ${money(o.total)} · төлсөн ${money(o.paid)}</p>
+      <div class="admin-row">
+        <select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${s}</option>`).join("")}</select>
+        <input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
+        <input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
+        <input id="addr${o.id}" value="${esc(o.address||"")}" placeholder="Хүргэлтийн хаяг">
+      </div>
+      <button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button>
+    </div>`).join("") : `<p class="muted-note">Захиалга алга байна.</p>`;
+}
+
+function filterOrdersAdmin(){
+  const q=$("orderSearch").value.trim().toLowerCase();
+  const filtered=(window.__allOrders||[]).filter(o=>
+    (o.customer_phone||"").toLowerCase().includes(q) ||
+    (o.customer_name||"").toLowerCase().includes(q) ||
+    (o.order_code||"").toLowerCase().includes(q)
+  );
+  renderOrdersAdminList(filtered);
+}
+
+function filterCustomers(){
+  const q=$("custSearch").value.trim().toLowerCase();
+  const filtered=(window.__allCustomers||[]).filter(c=>
+    (c.phone||"").toLowerCase().includes(q) || (c.name||"").toLowerCase().includes(q)
+  );
+  $("customersList").innerHTML = filtered.length ? filtered.map(c=>`<div class="admin-card"><b>${esc(c.name||"Нэргүй")}</b><br>${esc(c.phone)}</div>`).join("") : `<p class="muted-note">Олдсонгүй.</p>`;
+}
+
+async function importOrders(input){
+  const file=input.files[0]; if(!file) return;
+  const fd=new FormData(); fd.append("file",file);
+  try{
+    const r=await fetch("/api/admin/orders/import",{method:"POST",headers:{Authorization:"Bearer "+adminToken},body:fd});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||"Импорт хийхэд алдаа гарлаа");
+    alert(`Импортлогдсон: ${d.imported}, алгассан: ${d.skipped||0}`);
+    adminTab("orders");
+  }catch(e){alert(e.message)}
+}
+
 async function addProduct(){await api("/api/admin/products",{method:"POST",body:JSON.stringify({name:$("pn").value,price:$("pp").value,stock:$("pst").value,category:$("pc").value,image:$("pi").value,description:$("pd").value})});adminTab("products");loadProducts()}
 async function editProduct(id){const p=(await api("/api/admin/products")).find(x=>x.id==id);if(!p)return;const name=prompt("Барааны нэр",p.name);if(name===null)return;const price=prompt("Үнэ",p.price);const stock=prompt("Үлдэгдэл",p.stock);const image=prompt("Зураг URL",p.image||"");await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,stock,image})});adminTab("products");loadProducts()}
 async function deleteProduct(id){if(!confirm("Устгах уу?"))return;await api("/api/admin/products/"+id,{method:"DELETE"});adminTab("products");loadProducts()}
 async function saveOrder(id){await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status:$("st"+id).value,paid:$("paid"+id).value,cargo_code:$("cargo"+id).value,address:$("addr"+id).value})});alert("Захиалга шинэчлэгдлээ");adminTab("orders")}
 async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,airCargo:$("air").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
+
 init().catch(console.error);renderCart();
