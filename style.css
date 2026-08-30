@@ -83,6 +83,10 @@ header.top .icon{
   background:var(--grad);
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
+.hero-tagline{
+  font-size:.78rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); margin:2px 0 10px;
+}
 .hero > div:first-child > p{color:var(--muted); font-size:.92rem; max-width:380px; margin:0 auto; line-height:1.55;}
 
 .hero-card{
