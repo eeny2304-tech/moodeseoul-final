@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="mn">
 <head>
@@ -15,7 +16,7 @@
 
 <main>
 <section class="hero">
-  <div><span class="pill">🇰🇷 СОЛОНГОСООС ШУУД</span><h1>Оригинал бараа.<br><em>Гоё сонголт.</em></h1><p>Солонгосоос бүх төрлийн бараа захиалж, захиалгаа утасны дугаараар хянаарай.</p></div>
+  <div><span class="pill">🇰🇷 СОЛОНГОСООС ШУУД</span><h1> YOUR STYLE <br><em>Гоё сонголт.</em></h1><p>Солонгосоос бүх төрлийн бараа захиалж, захиалгаа утасны дугаараар хянаарай.</p></div>
   <div class="hero-card"><b>Хүргэлт</b><strong id="airDays">5-7 хоног</strong><span>агаар</span><strong id="groundDays">14-16 хоног</strong><span>газар</span></div>
 </section>
 
@@ -83,7 +84,7 @@
     <h3>ТӨЛБӨРИЙН МЭДЭЭЛЭЛ</h3>
     <div class="pay-note">
       <span>ℹ️</span>
-      <p><b>Анхааруулга</b><br>Барааны төлбөрийг урьдчилж баталгаажуулна. Каргоны төлбөр тусдаа бөгөөд бараагаа авахдаа каргонд төлнө.</p>
+      <p><b>Анхааруулга</b><br>Барааны төлбөрийг урьдчилж баталгаажуулна. Каргоны төлбөр тусдаа бөгөөд бараагаа авахдаа каргонд төлнө. Захиалга өгсний дараа <b>30 минутын дотор</b> төлбөрөө шилжүүлээгүй тохиолдолд захиалга автоматаар цуцлагдана.</p>
     </div>
     <p class="pay-check">✓ Төлбөр хийсэн дараа баримтаа илгээнэ үү</p>
     <p class="pay-check">✓ Захиалга баталгаажсаны дараа цуцлах боломжгүй</p>
@@ -104,9 +105,16 @@
         <div><span>Дансны дугаар</span><b id="successBankAccount">—</b></div>
         <div><span>Хүлээн авагч</span><b id="successBankHolder">—</b></div>
       </div>
-      <p class="success-note">Гүйлгээний утга дээр <b>утасны дугаар</b> болон <b>захиалгын кодоо</b> заавал бичиж төлбөрөө шилжүүлнэ үү.</p>
+      <p class="success-note">Гүйлгээний утга дээр <b>утасны дугаар</b> болон <b>захиалгын кодоо</b> заавал бичиж төлбөрөө шилжүүлнэ үү. <b>30 минутын дотор</b> төлбөр ороогүй бол захиалга автоматаар цуцлагдана.</p>
     </div>
     <button class="primary" onclick="closeOrderSuccess()">Ойлголоо</button>
+  </div>
+</div>
+
+<div id="orderDetailModal" class="modal hidden">
+  <div class="admin-box order-detail-box">
+    <div class="drawer-head"><h2>Захиалгын дэлгэрэнгүй</h2><button onclick="closeOrderDetail()">×</button></div>
+    <div id="orderDetailContent"></div>
   </div>
 </div>
 
@@ -137,7 +145,7 @@
   <div class="footer-grid">
     <div>
       <b class="footer-logo">MOODE SEOUL</b>
-      <p>Солонгосоос Монголдоо итгэлтэй, хурдан, найдвартай.</p>
+      <p>Солонгосоос Монголдоо итгэлтэй, хурдан, найдвартай 🇰🇷 -> 🇲🇳.</p>
       <div class="footer-social">
         <a href="#">📷</a><a href="#">🎵</a><a href="#">✈️</a><a href="#">📘</a>
       </div>
@@ -153,7 +161,7 @@
       <b>ХОЛБОО БАРИХ</b>
       <a href="tel:+9767288-3815">📞 <span id="footerPhone">(976) 7288-3815</span></a>
       <a href="#">✈️ @moodeseoul</a>
-      <a href="mailto:moodeseoul@gmail.com">✉️ moodeseoul@gmail.com</a>
+      <a href="insta: moode_seoul ">✉️ fb: moodeseoul</a>
     </div>
   </div>
   <div class="footer-bottom">© 2026 <span id="footerName">MOODE SEOUL</span>. Бүх эрх хуулиар хамгаалагдсан.</div>
