@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&family=Noto+Sans:wght@400;500;600;700&display=swap');
 
 :root{
-  --bg:#0b0b0e;
-  --bg-card:#16161c;
-  --bg-card-2:#1c1c24;
-  --line:#2a2a33;
+  --bg:#ffffff;
+  --bg-card:#ffffff;
+  --bg-card-2:#f2f2f7;
+  --line:#e3e3ec;
   --teal:#29d3d0;
   --pink:#ee5fa7;
   --grad:linear-gradient(120deg,var(--teal),#8b7fe0 55%,var(--pink));
-  --ink:#f4f4f6;
-  --muted:#96969f;
+  --ink:#17171d;
+  --muted:#6c6c78;
   --radius:16px;
 }
 
@@ -30,7 +30,7 @@ header.top{
   position:sticky; top:0; z-index:40;
   display:flex; align-items:center; gap:12px;
   padding:14px 20px;
-  background:rgba(11,11,14,.88);
+  background:rgba(255,255,255,.88);
   backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);
 }
@@ -241,19 +241,70 @@ button.primary:active{opacity:.85;}
 .stage.done .label{color:var(--ink); font-weight:600;}
 .stage.current .label{color:var(--pink); font-weight:700;}
 
-/* ---------- order flow (static reference image, framed as a light card) ---------- */
+/* ---------- order flow (light card, neon-accented, coded diagram) ---------- */
 .flow{padding:24px 20px 44px;}
-.flow-image-wrap{
-  max-width:520px; margin:0 auto; border-radius:18px; overflow:hidden;
-  background:#ffffff; padding:10px;
-  box-shadow:0 12px 30px rgba(0,0,0,.35);
-  border:1px solid rgba(255,255,255,.08);
+.flow-card-light{
+  max-width:520px; margin:0 auto; border-radius:20px; padding:26px 18px;
+  background:var(--bg-card); border:1px solid var(--line);
+  box-shadow:0 10px 30px rgba(0,0,0,.06);
 }
-.flow-image{display:block; width:100%; height:auto; border-radius:12px;}
+.flow-title-light{
+  font-size:.95rem; font-weight:800; letter-spacing:.06em; text-align:center;
+  color:var(--ink); margin:0 0 20px;
+}
+.flow-chain-light{display:flex; flex-direction:column; align-items:stretch;}
 
-.flow{padding:44px 20px;}
-.flow-title{font-size:.85rem; letter-spacing:.1em; color:var(--muted); margin-bottom:18px; text-align:center;}
-.flow-chain{display:flex; flex-direction:column; align-items:stretch; max-width:520px; margin:0 auto;}
+.flow-node-light{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:14px;
+  padding:16px; display:flex; align-items:center; gap:14px;
+}
+.flow-node-icon-light{
+  width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; font-size:1.25rem;
+  background:#fff; border:1px solid var(--line);
+}
+.flow-node-light b{font-size:.82rem; color:var(--ink); display:block; margin-bottom:3px;}
+.flow-node-light p{font-size:.72rem; color:var(--muted); margin:0; line-height:1.5;}
+
+.flow-arrow-light{
+  display:flex; align-items:center; justify-content:center;
+  width:30px; height:30px; margin:2px auto; border-radius:50%;
+  color:#fff; font-weight:900; font-size:.9rem; position:relative;
+}
+.flow-arrow-light::before{
+  content:""; position:absolute; left:50%; top:-13px; width:2px; height:13px; transform:translateX(-50%);
+}
+.flow-arrow-light::after{
+  content:""; position:absolute; left:50%; bottom:-13px; width:2px; height:13px; transform:translateX(-50%);
+}
+
+.flow-hub-light{
+  width:112px; height:112px; border-radius:50%; margin:4px auto;
+  background:#fff; border:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+}
+.flow-hub-light b{
+  font-size:.66rem; font-weight:900; letter-spacing:.02em;
+  background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.flow-hub-light span{font-size:.6rem; color:var(--muted); margin-top:4px;}
+
+/* neon accents */
+.neon-1 .flow-node-icon-light{background:rgba(168,85,247,.10); border-color:rgba(168,85,247,.5);}
+.neon-2 .flow-node-icon-light{background:rgba(255,45,149,.10); border-color:rgba(255,45,149,.5);}
+.neon-3 .flow-node-icon-light{background:rgba(255,0,128,.10); border-color:rgba(255,0,128,.5);}
+.neon-4 .flow-node-icon-light{background:rgba(255,214,10,.14); border-color:rgba(255,214,10,.6);}
+.neon-5 .flow-node-icon-light{background:rgba(255,47,86,.10); border-color:rgba(255,47,86,.5);}
+.neon-finish .flow-node-icon-light{background:rgba(0,255,157,.12); border-color:rgba(0,200,125,.55);}
+
+.flow-arrow-light.neon-1{background:#a855f7;} .flow-arrow-light.neon-1::before,.flow-arrow-light.neon-1::after{background:#a855f7;}
+.flow-arrow-light.neon-2{background:#ff2d95;} .flow-arrow-light.neon-2::before{background:#a855f7;} .flow-arrow-light.neon-2::after{background:#ff2d95;}
+.flow-arrow-light.neon-3{background:#ff0080;} .flow-arrow-light.neon-3::before{background:#ff2d95;} .flow-arrow-light.neon-3::after{background:#ff0080;}
+.flow-arrow-light.neon-4{background:#ffb800;} .flow-arrow-light.neon-4::before{background:#ff0080;} .flow-arrow-light.neon-4::after{background:#ffb800;}
+.flow-arrow-light.neon-5{background:#ff2f56;} .flow-arrow-light.neon-5::before{background:#ffb800;} .flow-arrow-light.neon-5::after{background:#ff2f56;}
+.flow-arrow-light.neon-finish{background:#00c87d;} .flow-arrow-light.neon-finish::before{background:#ff2f56;} .flow-arrow-light.neon-finish::after{background:#00c87d;}
+
+
 
 .flow-step{
   background:var(--bg-card); border:1px solid var(--line); border-radius:14px;
