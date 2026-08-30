@@ -122,6 +122,17 @@
   </div>
 </div>
 
+<div id="faqModal" class="modal hidden">
+  <div class="admin-box faq-box">
+    <div class="drawer-head"><h2>Түгээмэл асуултууд</h2><button onclick="closeFaq()">×</button></div>
+    <div class="faq-item"><b>Хэрхэн захиалга өгөх вэ?</b><p>Бараагаа сонгож, захиалгаа илгээгээд, төлбөрөө баталгаажуулснаар захиалга бүртгэгдэнэ. Дэлгэрэнгүй алхмуудыг "Захиалга өгөх явц" хэсгээс харна уу.</p></div>
+    <div class="faq-item"><b>Хүргэлт хэр удах вэ?</b><p>Агаар тээвэр 5-7 хоног, газар тээвэр 14-16 хоног үргэлжилнэ.</p></div>
+    <div class="faq-item"><b>Төлбөрөө хэрхэн шилжүүлэх вэ?</b><p>Захиалга баталгаажсаны дараа гарч ирэх Хаан банкны дансаар шилжүүлнэ. Гүйлгээний утга дээр утасны дугаар болон захиалгын кодоо заавал бичнэүү.</p></div>
+    <div class="faq-item"><b>Захиалгаа хэрхэн хянах вэ?</b><p>Нүүр хуудасны "Хайх" хэсэгт захиалга өгсөн утасны дугаараа оруулж хайна уу.</p></div>
+    <div class="faq-item"><b>Төлбөрөө хугацаанд нь шилжүүлээгүй бол яах вэ?</b><p>Захиалга өгсний дараа 30 минутын дотор төлбөр ороогүй тохиолдолд захиалга автоматаар цуцлагдана.</p></div>
+  </div>
+</div>
+
 <div id="adminModal" class="modal hidden admin-fullscreen">
   <div class="admin-box admin-box-full">
     <div class="drawer-head"><h2>Admin</h2><button onclick="closeAdmin()">×</button></div>
@@ -150,22 +161,25 @@
     <div>
       <b class="footer-logo">MOODE SEOUL</b>
       <p>Солонгосоос Монголдоо итгэлтэй, хурдан, найдвартай.</p>
-      <div class="footer-social">
-        <a href="#">📷</a><a href="#">🎵</a><a href="#">✈️</a><a href="#">📘</a>
+      <div class="trust-badges">
+        <div class="trust-badge"><span class="trust-icon">🛡️</span><span>Оригинал<br>бараа</span></div>
+        <div class="trust-badge"><span class="trust-icon">🚚</span><span>Хурдан<br>хүргэлт</span></div>
+        <div class="trust-badge"><span class="trust-icon">✈️</span><span>Солонгосоос<br>шууд</span></div>
+        <div class="trust-badge"><span class="trust-icon">📦</span><span>Баталгаатай<br>савалгаа</span></div>
       </div>
     </div>
     <div>
       <b>ЦЭС</b>
-      <a href="#">Нүүр</a>
-      <a href="#">Миний захиалга</a>
-      <a href="#">FAQ</a>
-      <a href="#">Холбоо барих</a>
+      <a href="#" onclick="scrollToTop(event)">Нүүр</a>
+      <a href="#" onclick="scrollToMyOrders(event)">Миний захиалга</a>
+      <a href="#" onclick="openFaq(event)">FAQ</a>
+      <a href="#" onclick="scrollToContact(event)">Холбоо барих</a>
     </div>
-    <div>
+    <div id="contactBlock">
       <b>ХОЛБОО БАРИХ</b>
       <a href="tel:+9767288-3815">📞 <span id="footerPhone">(976) 7288-3815</span></a>
-      <a href="#">✈️ @moodeseoul</a>
-      <a href="mailto:moodeseoul@gmail.com">✉️ moodeseoul@gmail.com</a>
+      <a href="https://facebook.com/moodeseoul" target="_blank" rel="noopener">📘 Facebook · Moode Seoul</a>
+      <a href="https://instagram.com/moode_seoul" target="_blank" rel="noopener">📷 Instagram · moode_seoul</a>
     </div>
   </div>
   <div class="footer-bottom">© 2026 <span id="footerName">MOODE SEOUL</span>. Бүх эрх хуулиар хамгаалагдсан.</div>
