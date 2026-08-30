@@ -157,7 +157,7 @@ button.primary:active{opacity:.85;}
 }
 .product:hover{transform:translateY(-3px); border-color:var(--teal);}
 .product img{width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; background:var(--bg-card-2);}
-.product .p h3{font-size:.82rem; font-weight:700; margin:6px 0 2px; color:var(--ink);}
+.product .p h3{font-size:.82rem; font-weight:700; margin:2px 0 2px; color:var(--ink);}
 .product .price{
   font-weight:800; font-size:.85rem;
   background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -167,6 +167,21 @@ button.primary:active{opacity:.85;}
   width:100%; padding:9px; border-radius:8px; border:0; cursor:pointer;
   background:var(--grad); color:#0b0b0e; font-weight:700; font-size:.75rem;
 }
+.product .p button:disabled{background:var(--bg-card-2); color:var(--muted); cursor:not-allowed;}
+
+.cat-badge{
+  display:inline-block; align-self:flex-start; font-size:.6rem; font-weight:700;
+  letter-spacing:.03em; padding:3px 9px; border-radius:999px; margin-bottom:2px;
+  background:var(--bg-card-2); border:1px solid var(--line); color:var(--muted);
+}
+.cat-badge.cat-mn_belen{color:var(--teal); border-color:rgba(41,211,208,.4); background:rgba(41,211,208,.08);}
+.cat-badge.cat-kr_belen{color:#c9a6ff; border-color:rgba(201,166,255,.4); background:rgba(201,166,255,.08);}
+.cat-badge.cat-order{color:var(--pink); border-color:rgba(238,95,167,.4); background:rgba(238,95,167,.08);}
+
+.size-select{
+  width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+  background:var(--bg-card-2); color:var(--ink); font-size:.72rem; margin:2px 0;
+}
 
 /* ---------- order cards (Таны захиалгууд) ---------- */
 #orders{display:flex; flex-direction:column; gap:14px; padding:0 20px 10px;}
@@ -174,7 +189,10 @@ button.primary:active{opacity:.85;}
 .order-card{
   background:var(--bg-card); border:1px solid var(--line); border-radius:18px;
   padding:22px; display:flex; flex-direction:column; gap:16px;
+  cursor:pointer; transition:border-color .2s;
 }
+.order-card:hover{border-color:var(--teal);}
+.order-tap-hint{font-size:.68rem; color:var(--teal); text-align:right; margin-top:-8px;}
 .order-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
 .order-eyebrow{display:block; font-size:.62rem; letter-spacing:.12em; color:var(--muted); margin-bottom:4px;}
 .order-code{font-size:1rem; font-weight:800;}
@@ -303,7 +321,7 @@ button.primary:active{opacity:.85;}
 .cart-item b{color:var(--ink);}
 #cartItems h3{font-size:.9rem; margin-top:12px; text-align:right;}
 
-/* ---------- modal (order success) ---------- */
+/* ---------- modal (order success / detail) ---------- */
 .modal{
   position:fixed; inset:0; z-index:70;
   background:rgba(0,0,0,.6); backdrop-filter:blur(3px);
@@ -314,6 +332,7 @@ button.primary:active{opacity:.85;}
   background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius);
   padding:22px; display:flex; flex-direction:column; gap:12px;
 }
+.order-detail-box{border-color:rgba(238,95,167,.35);}
 
 /* ---------- admin: full-screen ---------- */
 .admin-fullscreen{padding:0; align-items:stretch; justify-content:stretch; backdrop-filter:none;}
@@ -355,6 +374,17 @@ button.primary:active{opacity:.85;}
 #adminContent textarea{width:100%; min-height:70px; margin-bottom:8px;}
 .section-sub{font-size:.85rem; color:var(--muted); margin:20px 0 10px; letter-spacing:.05em;}
 .muted-note{font-size:.78rem; color:var(--muted); text-align:center; padding:14px;}
+.field-label{font-size:.7rem; color:var(--muted); margin:10px 0 6px; letter-spacing:.03em;}
+
+/* size rows (admin product form) */
+.size-row{align-items:center;}
+.size-size{flex:1.4 !important;}
+.size-qty{flex:1 !important;}
+.size-remove{
+  flex:0 0 auto !important; width:34px; padding:0 !important; border-radius:8px; border:1px solid var(--line);
+  background:var(--bg-card); color:var(--muted); cursor:pointer; font-size:.85rem;
+}
+.size-remove:hover{color:#f87171; border-color:#f87171;}
 
 /* file upload button */
 .file-btn{
