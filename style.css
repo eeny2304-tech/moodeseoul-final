@@ -461,13 +461,25 @@ button.primary:active{opacity:.85;}
   background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .footer-grid > div:first-child p{font-size:.78rem; color:var(--muted); line-height:1.5;}
-.footer-social{display:flex; gap:10px; margin-top:14px;}
-.footer-social a{
-  width:34px; height:34px; border-radius:50%; background:var(--bg-card); border:1px solid var(--line);
-  display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:.9rem;
-}
-.footer-grid a{display:block; color:var(--muted); text-decoration:none; font-size:.8rem; margin-bottom:10px;}
+.footer-grid a{display:block; color:var(--muted); text-decoration:none; font-size:.8rem; margin-bottom:10px; cursor:pointer;}
 .footer-grid a:hover{color:var(--ink);}
+
+.trust-badges{display:flex; gap:14px; margin-top:16px; flex-wrap:wrap;}
+.trust-badge{display:flex; flex-direction:column; align-items:center; gap:8px; width:64px;}
+.trust-icon{
+  width:52px; height:52px; border-radius:50%; background:var(--bg-card); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+}
+.trust-badge span:last-child{font-size:.66rem; color:var(--muted); text-align:center; line-height:1.35;}
+
+/* FAQ modal */
+.faq-box{border-color:rgba(41,211,208,.35);}
+.faq-item{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:10px;
+}
+.faq-item b{display:block; font-size:.85rem; color:var(--ink); margin-bottom:6px;}
+.faq-item p{font-size:.78rem; color:var(--muted); line-height:1.55; margin:0;}
 .footer-bottom{
   text-align:center; margin-top:30px; padding-top:20px; border-top:1px solid var(--line);
   font-size:.72rem; color:var(--muted);
