@@ -39,6 +39,11 @@ header.top .logo{
   object-fit:cover; border:1px solid var(--line);
   flex:0 0 auto;
 }
+.logo-fallback{
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size:.85rem;
+  background:var(--grad); color:#0b0b0e;
+}
 header.top .brand{display:flex; flex-direction:column; line-height:1.15;}
 header.top .brand b{
   font-weight:900; font-size:.95rem; letter-spacing:.06em;
@@ -272,6 +277,28 @@ button.primary:active{opacity:.85;}
   content:""; position:absolute; left:50%; bottom:-14px; width:2px; height:14px;
   background:var(--grad); transform:translateX(-50%);
 }
+
+/* per-step accent colors, echoing a colorful reference flow diagram */
+.flow-step.accent-start .flow-icon{background:rgba(167,139,250,.14); border-color:rgba(167,139,250,.4);}
+.flow-step.accent-1 .flow-icon{background:rgba(167,139,250,.14); border-color:rgba(167,139,250,.4);}
+.flow-step.accent-2 .flow-icon{background:rgba(244,114,182,.14); border-color:rgba(244,114,182,.4);}
+.flow-step.accent-3 .flow-icon{background:rgba(236,72,153,.14); border-color:rgba(236,72,153,.4);}
+.flow-step.accent-4 .flow-icon{background:rgba(251,191,36,.14); border-color:rgba(251,191,36,.4);}
+.flow-step.accent-5 .flow-icon{background:rgba(251,113,133,.14); border-color:rgba(251,113,133,.4);}
+.flow-step.accent-finish .flow-icon{background:rgba(52,211,153,.14); border-color:rgba(52,211,153,.4);}
+
+.flow-arrow.accent-start{background:linear-gradient(120deg,#a78bfa,#a78bfa);}
+.flow-arrow.accent-2{background:linear-gradient(120deg,#a78bfa,#f472b6);}
+.flow-arrow.accent-3{background:linear-gradient(120deg,#f472b6,#ec4899);}
+.flow-arrow.accent-4{background:linear-gradient(120deg,#ec4899,#fbbf24);}
+.flow-arrow.accent-5{background:linear-gradient(120deg,#fbbf24,#fb7185);}
+.flow-arrow.accent-finish{background:linear-gradient(120deg,#fb7185,#34d399);}
+.flow-arrow.accent-start::before,.flow-arrow.accent-start::after{background:#a78bfa;}
+.flow-arrow.accent-2::before{background:#a78bfa;} .flow-arrow.accent-2::after{background:#f472b6;}
+.flow-arrow.accent-3::before{background:#f472b6;} .flow-arrow.accent-3::after{background:#ec4899;}
+.flow-arrow.accent-4::before{background:#ec4899;} .flow-arrow.accent-4::after{background:#fbbf24;}
+.flow-arrow.accent-5::before{background:#fbbf24;} .flow-arrow.accent-5::after{background:#fb7185;}
+.flow-arrow.accent-finish::before{background:#fb7185;} .flow-arrow.accent-finish::after{background:#34d399;}
 
 @media(min-width:720px){
   .flow-chain{max-width:900px;}
