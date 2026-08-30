@@ -1,5 +1,4 @@
-
-let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", trackMode="phone", settings={};
+let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
 let myOrders=[];
 
 const $=id=>document.getElementById(id);
@@ -97,7 +96,11 @@ function showOrderSuccess(code){
 }
 function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
 
-function setTrack(mode,btn){trackMode=mode;document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$("trackInput").placeholder=mode==="phone"?"Утасны дугаараа оруулна уу":"Шилжүүлэг хийсэн дансны дугаараа оруулна уу"}
+function filterProducts(){
+  const q=$("productSearch").value.trim().toLowerCase();
+  const filtered = q ? products.filter(p=>(p.name||"").toLowerCase().includes(q)) : products;
+  $("products").innerHTML = filtered.length ? filtered.map(productCardHtml).join("") : `<div class="admin-card">Хайлтад тохирох бараа олдсонгүй.</div>`;
+}
 
 async function trackOrders(){
   const phone=$("trackInput").value.trim();
