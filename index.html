@@ -110,7 +110,26 @@
   </div>
 </div>
 
-<div id="adminModal" class="modal hidden"><div class="admin-box"><div class="drawer-head"><h2>Admin</h2><button onclick="closeAdmin()">×</button></div><div id="adminLogin"><input id="adminPhone" placeholder="Утас"><input id="adminPassword" type="password" placeholder="Нууц үг"><button class="primary" onclick="adminLogin()">Нэвтрэх</button></div><div id="adminPanel" class="hidden"><div class="admin-nav"><button onclick="adminTab('dashboard')">Хянах</button><button onclick="adminTab('products')">Бараа</button><button onclick="adminTab('orders')">Захиалга</button><button onclick="adminTab('settings')">Тохиргоо</button></div><div id="adminContent"></div></div></div></div>
+<div id="adminModal" class="modal hidden admin-fullscreen">
+  <div class="admin-box admin-box-full">
+    <div class="drawer-head"><h2>Admin</h2><button onclick="closeAdmin()">×</button></div>
+    <div id="adminLogin">
+      <input id="adminPhone" placeholder="Утас">
+      <input id="adminPassword" type="password" placeholder="Нууц үг">
+      <button class="primary" onclick="adminLogin()">Нэвтрэх</button>
+    </div>
+    <div id="adminPanel" class="hidden">
+      <div class="admin-nav">
+        <button onclick="adminTab('dashboard')">Хянах</button>
+        <button onclick="adminTab('products')">Бараа</button>
+        <button onclick="adminTab('orders')">Захиалга</button>
+        <button onclick="adminTab('customers')">Хэрэглэгчид</button>
+        <button onclick="adminTab('settings')">Тохиргоо</button>
+      </div>
+      <div id="adminContent"></div>
+    </div>
+  </div>
+</div>
 
 <button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
 
