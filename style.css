@@ -106,14 +106,9 @@ header.top .icon{
   max-width:520px; margin:0 auto; padding:0 20px 40px;
   display:flex; flex-direction:column; gap:10px;
 }
-.tabs{display:flex; gap:8px;}
-.tabs button{
-  flex:1; padding:10px; border-radius:10px; border:1px solid var(--line);
-  background:var(--bg-card); color:var(--muted); font-size:.78rem; font-weight:700;
-  cursor:pointer; transition:.2s;
-}
-.tabs button.active{
-  background:var(--grad); color:#0b0b0e; border-color:transparent;
+.track-label{
+  font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); margin:0;
 }
 #trackInput{
   padding:13px 16px; border-radius:10px; border:1px solid var(--line);
@@ -129,13 +124,13 @@ button.primary{
 }
 button.primary:active{opacity:.85;}
 
-.hints{display:flex; gap:10px; justify-content:space-between; margin-top:6px;}
-.hints div{
-  flex:1; text-align:center; background:var(--bg-card); border:1px solid var(--line);
-  border-radius:12px; padding:12px 6px;
+.product-search{
+  display:block; width:calc(100% - 40px); margin:0 20px 16px;
+  padding:13px 16px; border-radius:10px; border:1px solid var(--line);
+  background:var(--bg-card); color:var(--ink); font-size:.85rem; outline:none;
 }
-.hints b{display:block; font-size:.8rem; color:var(--ink);}
-.hints span{font-size:.66rem; color:var(--muted);}
+.product-search:focus{border-color:var(--teal);}
+.product-search::placeholder{color:var(--muted);}
 
 /* ---------- section title ---------- */
 .section-title{
@@ -246,9 +241,9 @@ button.primary:active{opacity:.85;}
 .stage.done .label{color:var(--ink); font-weight:600;}
 .stage.current .label{color:var(--pink); font-weight:700;}
 
-/* ---------- order flow chain (arrow-connected) ---------- */
+/* ---------- order flow chain (arrow-connected, vertical/compact) ---------- */
 .flow{padding:44px 20px;}
-.flow-title{font-size:.85rem; letter-spacing:.1em; color:var(--muted); margin-bottom:18px;}
+.flow-title{font-size:.85rem; letter-spacing:.1em; color:var(--muted); margin-bottom:18px; text-align:center;}
 .flow-chain{display:flex; flex-direction:column; align-items:stretch; max-width:520px; margin:0 auto;}
 
 .flow-step{
@@ -278,7 +273,18 @@ button.primary:active{opacity:.85;}
   background:var(--grad); transform:translateX(-50%);
 }
 
-/* per-step accent colors, echoing a colorful reference flow diagram */
+.flow-hub-inline{
+  width:120px; height:120px; border-radius:50%; margin:4px auto;
+  background:var(--bg-card-2); border:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+}
+.flow-hub-inline b{
+  font-size:.72rem; font-weight:900; letter-spacing:.03em;
+  background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.flow-hub-inline span{font-size:.65rem; color:var(--muted); margin-top:4px;}
+
+/* per-step accent colors */
 .flow-step.accent-start .flow-icon{background:rgba(167,139,250,.14); border-color:rgba(167,139,250,.4);}
 .flow-step.accent-1 .flow-icon{background:rgba(167,139,250,.14); border-color:rgba(167,139,250,.4);}
 .flow-step.accent-2 .flow-icon{background:rgba(244,114,182,.14); border-color:rgba(244,114,182,.4);}
