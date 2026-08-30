@@ -25,13 +25,16 @@
 </section>
 
 <section class="track">
-  <div class="tabs"><button class="active" onclick="setTrack('phone',this)">📞 Утасны дугаар</button><button onclick="setTrack('bank',this)">🏦 Дансны дугаар</button></div>
+  <p class="track-label">📞 Захиалгаа хянах</p>
   <input id="trackInput" placeholder="Утасны дугаараа оруулна уу">
   <button class="primary" onclick="trackOrders()">Хайх →</button>
-  <div class="hints"><div><b>Шууд</b><span>Хариу</span></div><div><b>Төлөв</b><span>Шинэчлэлт</span></div><div><b>Нэг дор</b><span>Мэдээлэл</span></div></div>
 </section>
 
-<section><div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div><div id="products" class="grid"></div></section>
+<section>
+  <div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
+  <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
+  <div id="products" class="grid"></div>
+</section>
 <section id="ordersSection" class="hidden"><div class="section-title"><h2>Таны захиалгууд</h2></div><div id="orders"></div></section>
 
 <section class="flow">
@@ -56,7 +59,14 @@
       <div class="flow-icon">🌸</div>
       <div class="flow-text"><b>Төлбөрөө баталгаажуулна</b><p>Барааны үнийг 100% төлнө. Карго ирсний дараа карго төлбөрийг тусдаа төлнө.</p></div>
     </div>
+
+    <div class="flow-arrow accent-3">↓</div>
+    <div class="flow-hub-inline">
+      <b>MOODE SEOUL</b>
+      <span>🇰🇷 → 🇲🇳</span>
+    </div>
     <div class="flow-arrow accent-4">↓</div>
+
     <div class="flow-step accent-4">
       <div class="flow-icon">🌼</div>
       <div class="flow-text"><b>Каргонд өгсөн кодоо авна</b><p>Каргонд өгсөний дараа код олгогдоно.</p></div>
