@@ -241,7 +241,16 @@ button.primary:active{opacity:.85;}
 .stage.done .label{color:var(--ink); font-weight:600;}
 .stage.current .label{color:var(--pink); font-weight:700;}
 
-/* ---------- order flow chain (arrow-connected, vertical/compact) ---------- */
+/* ---------- order flow (static reference image, framed as a light card) ---------- */
+.flow{padding:24px 20px 44px;}
+.flow-image-wrap{
+  max-width:520px; margin:0 auto; border-radius:18px; overflow:hidden;
+  background:#ffffff; padding:10px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);
+}
+.flow-image{display:block; width:100%; height:auto; border-radius:12px;}
+
 .flow{padding:44px 20px;}
 .flow-title{font-size:.85rem; letter-spacing:.1em; color:var(--muted); margin-bottom:18px; text-align:center;}
 .flow-chain{display:flex; flex-direction:column; align-items:stretch; max-width:520px; margin:0 auto;}
