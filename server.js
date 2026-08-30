@@ -85,6 +85,9 @@ async function dbInit() {
       created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()
     );
   `);
+  // Migrations for columns added after initial launch — safe to re-run.
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes jsonb DEFAULT '[]';`);
+
   const count = await pool.query("SELECT COUNT(*)::int AS n FROM admins");
   if (!count.rows[0].n) {
     const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || "ChangeMe123!", 10);
@@ -136,52 +139,111 @@ async function setSettings(obj) {
   return getSettings();
 }
 
+function parseSizes(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") { try { return JSON.parse(raw) || []; } catch { return []; } }
+  return [];
+}
+function totalFromSizes(sizes) {
+  return sizes.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+}
+
 async function listProducts(admin=false) {
   if (!usePostgres) {
-    return loadJson().products.filter(p => admin || p.active !== false).sort((a,b)=>b.id-a.id);
+    const list = loadJson().products.filter(p => admin || p.active !== false).sort((a,b)=>b.id-a.id);
+    return list.map(p => ({...p, sizes: parseSizes(p.sizes)}));
   }
   const q = admin ? "SELECT * FROM products ORDER BY id DESC" : "SELECT * FROM products WHERE active=true ORDER BY id DESC";
-  return (await pool.query(q)).rows;
+  const rows = (await pool.query(q)).rows;
+  return rows.map(p => ({...p, sizes: parseSizes(p.sizes)}));
 }
 async function createProduct(p) {
+  const sizes = parseSizes(p.sizes);
+  const stock = sizes.length ? totalFromSizes(sizes) : (Number(p.stock) || 0);
   if (!usePostgres) {
     const d=loadJson(); const id=(d.products[0]?.id||0)+1;
-    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,stock:Number(p.stock)||0,category:p.category||"",image:p.image||"",active:p.active!==false};
+    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,stock,category:p.category||"",image:p.image||"",active:p.active!==false,sizes};
     d.products.push(item); saveJson(d); return item;
   }
-  return (await pool.query(`INSERT INTO products(name,description,price,stock,category,image,active)
-    VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.stock)||0,p.category||"",p.image||"",p.active!==false])).rows[0];
+  return (await pool.query(`INSERT INTO products(name,description,price,stock,category,image,active,sizes)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,stock,p.category||"",p.image||"",p.active!==false,JSON.stringify(sizes)])).rows[0];
 }
 async function updateProduct(id,p) {
+  const sizes = parseSizes(p.sizes);
+  const stock = sizes.length ? totalFromSizes(sizes) : Number(p.stock)||0;
   if (!usePostgres) {
     const d=loadJson(), i=d.products.findIndex(x=>x.id==id); if(i<0) throw Error("Product not found");
-    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),stock:Number(p.stock??d.products[i].stock)}; saveJson(d); return d.products[i];
+    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),stock,sizes}; saveJson(d); return d.products[i];
   }
-  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,stock=$4,category=$5,image=$6,active=$7 WHERE id=$8 RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.stock)||0,p.category||"",p.image||"",p.active!==false,id])).rows[0];
+  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,stock=$4,category=$5,image=$6,active=$7,sizes=$8 WHERE id=$9 RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,stock,p.category||"",p.image||"",p.active!==false,JSON.stringify(sizes),id])).rows[0];
 }
 async function deleteProduct(id) {
   if (!usePostgres) { const d=loadJson(); d.products=d.products.filter(x=>x.id!=id); saveJson(d); return; }
   await pool.query("DELETE FROM products WHERE id=$1",[id]);
 }
+async function getProductRaw(id) {
+  if (!usePostgres) return loadJson().products.find(x => x.id == id);
+  return (await pool.query("SELECT * FROM products WHERE id=$1",[id])).rows[0];
+}
+
+// sign = -1 to decrement stock (order placed), +1 to restore stock (order cancelled)
+async function adjustStock(items, sign) {
+  for (const it of items || []) {
+    if (!it.product_id) continue;
+    const qtyChange = sign * (Number(it.qty) || 1);
+    if (!usePostgres) {
+      const d = loadJson();
+      const p = d.products.find(x => x.id == it.product_id);
+      if (!p) continue;
+      const sizes = parseSizes(p.sizes);
+      if (sizes.length && it.size) {
+        const s = sizes.find(sz => String(sz.size) === String(it.size));
+        if (s) s.qty = Math.max(0, (Number(s.qty)||0) + qtyChange);
+        p.sizes = sizes;
+        p.stock = totalFromSizes(sizes);
+      } else {
+        p.stock = Math.max(0, (Number(p.stock)||0) + qtyChange);
+      }
+      saveJson(d);
+    } else {
+      const p = await getProductRaw(it.product_id);
+      if (!p) continue;
+      const sizes = parseSizes(p.sizes);
+      if (sizes.length && it.size) {
+        const newSizes = sizes.map(sz => String(sz.size) === String(it.size)
+          ? { ...sz, qty: Math.max(0, (Number(sz.qty)||0) + qtyChange) } : sz);
+        const newStock = totalFromSizes(newSizes);
+        await pool.query("UPDATE products SET sizes=$1, stock=$2 WHERE id=$3",[JSON.stringify(newSizes), newStock, it.product_id]);
+      } else {
+        const newStock = Math.max(0, (Number(p.stock)||0) + qtyChange);
+        await pool.query("UPDATE products SET stock=$1 WHERE id=$2",[newStock, it.product_id]);
+      }
+    }
+  }
+}
 
 async function createOrder(o) {
+  let created;
   if (!usePostgres) {
     const d=loadJson(), id=(d.orders[0]?.id||0)+1;
     const item={id,order_code:orderCode(),...o,total:Number(o.total),paid:Number(o.paid||0),status:o.status||"registered",created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     d.orders.unshift(item);
     const ci=d.customers.findIndex(c=>c.phone===normalizePhone(o.customer_phone));
     if(ci<0) d.customers.push({id:d.customers.length+1,phone:normalizePhone(o.customer_phone),name:o.customer_name||""});
-    saveJson(d); return item;
+    saveJson(d); created = item;
+  } else {
+    const code=orderCode();
+    const r=await pool.query(`INSERT INTO orders(order_code,customer_phone,customer_name,items,total,paid,cargo_type,cargo_code,status,address,note)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [code,normalizePhone(o.customer_phone),o.customer_name||"",JSON.stringify(o.items||[]),Number(o.total)||0,Number(o.paid)||0,o.cargo_type||"air",o.cargo_code||"",o.status||"registered",o.address||"",o.note||""]);
+    await pool.query(`INSERT INTO customers(phone,name) VALUES($1,$2) ON CONFLICT(phone) DO UPDATE SET name=COALESCE(NULLIF(EXCLUDED.name,''),customers.name)`,
+      [normalizePhone(o.customer_phone),o.customer_name||""]);
+    created = r.rows[0];
   }
-  const code=orderCode();
-  const r=await pool.query(`INSERT INTO orders(order_code,customer_phone,customer_name,items,total,paid,cargo_type,cargo_code,status,address,note)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-    [code,normalizePhone(o.customer_phone),o.customer_name||"",JSON.stringify(o.items||[]),Number(o.total)||0,Number(o.paid)||0,o.cargo_type||"air",o.cargo_code||"",o.status||"registered",o.address||"",o.note||""]);
-  await pool.query(`INSERT INTO customers(phone,name) VALUES($1,$2) ON CONFLICT(phone) DO UPDATE SET name=COALESCE(NULLIF(EXCLUDED.name,''),customers.name)`,
-    [normalizePhone(o.customer_phone),o.customer_name||""]);
-  return r.rows[0];
+  await adjustStock(o.items, -1);
+  return created;
 }
 async function findOrders(phone) {
   phone=normalizePhone(phone);
@@ -192,13 +254,25 @@ async function allOrders() {
   if(!usePostgres) return loadJson().orders.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   return (await pool.query("SELECT * FROM orders ORDER BY created_at DESC")).rows;
 }
+async function getOrderById(id) {
+  if (!usePostgres) return loadJson().orders.find(x => x.id == id);
+  return (await pool.query("SELECT * FROM orders WHERE id=$1",[id])).rows[0];
+}
 async function updateOrder(id,p) {
+  const current = await getOrderById(id);
+  if (!current) throw Error("Order not found");
+
+  const wasCancelled = current.status === "cancelled";
+  const willCancel = p.status === "cancelled";
+  if (willCancel && !wasCancelled) {
+    const items = Array.isArray(current.items) ? current.items : (typeof current.items === "string" ? JSON.parse(current.items) : []);
+    await adjustStock(items, +1);
+  }
+
   if(!usePostgres){
     const d=loadJson(), i=d.orders.findIndex(x=>x.id==id); if(i<0) throw Error("Order not found");
     d.orders[i]={...d.orders[i],...p,updated_at:new Date().toISOString()}; saveJson(d); return d.orders[i];
   }
-  const current=(await pool.query("SELECT * FROM orders WHERE id=$1",[id])).rows[0];
-  if(!current) throw Error("Order not found");
   return (await pool.query(`UPDATE orders SET customer_name=$1,paid=$2,cargo_type=$3,cargo_code=$4,status=$5,address=$6,note=$7,items=$8,total=$9,updated_at=now()
     WHERE id=$10 RETURNING *`,
     [p.customer_name??current.customer_name,Number(p.paid??current.paid),p.cargo_type??current.cargo_type,p.cargo_code??current.cargo_code,p.status??current.status,p.address??current.address,p.note??current.note,JSON.stringify(p.items??current.items),Number(p.total??current.total),id])).rows[0];
@@ -207,6 +281,28 @@ async function updateOrder(id,p) {
 async function listCustomers() {
   if (!usePostgres) return loadJson().customers.slice().reverse();
   return (await pool.query("SELECT * FROM customers ORDER BY created_at DESC")).rows;
+}
+
+// Cancel unpaid orders left in "registered" status for more than 30 minutes, restoring their stock.
+async function autoCancelStaleOrders() {
+  try {
+    const orders = await allOrders();
+    const now = Date.now();
+    for (const o of orders) {
+      if (o.status !== "registered") continue;
+      if (Number(o.paid || 0) > 0) continue;
+      const created = new Date(o.created_at).getTime();
+      if (isNaN(created)) continue;
+      if (now - created > 30 * 60 * 1000) {
+        await updateOrder(o.id, {
+          status: "cancelled",
+          note: (o.note ? o.note + " | " : "") + "Автоматаар цуцлагдсан (30 минутанд төлбөр орсонгүй)"
+        });
+      }
+    }
+  } catch (e) {
+    console.error("autoCancelStaleOrders error:", e.message);
+  }
 }
 
 const upload = multer({ storage: multer.diskStorage({
@@ -226,7 +322,6 @@ app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
   const adminUser = String(process.env.ADMIN_USER || "").trim();
   const adminPassword = String(process.env.ADMIN_PASSWORD || "");
 
-  // Railway ADMIN_USER + ADMIN_PASSWORD login
   if (
     adminUser &&
     adminPassword &&
@@ -234,53 +329,27 @@ app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
     password === adminPassword
   ) {
     return res.json({
-      token: tokenFor({
-        role: "admin",
-        id: "env-admin",
-        phone: login
-      }),
-      admin: {
-        phone: login,
-        name: "Admin"
-      }
+      token: tokenFor({ role: "admin", id: "env-admin", phone: login }),
+      admin: { phone: login, name: "Admin" }
     });
   }
 
-  // Existing database admin login
   const phone = normalizePhone(login);
   let admin;
 
   if (usePostgres) {
-    admin = (await pool.query(
-      "SELECT * FROM admins WHERE phone=$1",
-      [phone]
-    )).rows[0];
+    admin = (await pool.query("SELECT * FROM admins WHERE phone=$1", [phone])).rows[0];
   } else {
     admin = loadJson().admins.find(a => a.phone === phone);
   }
 
-  if (
-    !admin ||
-    !(await bcrypt.compare(
-      password,
-      admin.password_hash || admin.passwordHash
-    ))
-  ) {
-    return res.status(401).json({
-      error: "Утас эсвэл нууц үг буруу"
-    });
+  if (!admin || !(await bcrypt.compare(password, admin.password_hash || admin.passwordHash))) {
+    return res.status(401).json({ error: "Утас эсвэл нууц үг буруу" });
   }
 
   res.json({
-    token: tokenFor({
-      role: "admin",
-      id: admin.id,
-      phone
-    }),
-    admin: {
-      phone,
-      name: admin.name
-    }
+    token: tokenFor({ role: "admin", id: admin.id, phone }),
+    admin: { phone, name: admin.name }
   });
 });
 
@@ -346,9 +415,6 @@ app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
   });
 });
 
-// Bulk order import from an Excel (.xlsx) file exported from Facebook order tracking.
-// Expected column headers (Mongolian or English, case-insensitive): Утас/Phone, Нэр/Name,
-// Карго/Cargo, Бараа/Product, Үнэ/Price
 app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"), async (req,res)=>{
   if (!XLSX) {
     return res.status(500).json({ error: "Серверт 'xlsx' сан суулгаагүй байна. package.json-д \"xlsx\": \"^0.18.5\" нэмээд дахин deploy хийнэ үү." });
@@ -407,4 +473,7 @@ app.get("/api/admin/odoo-status", auth("admin"), async (_,res)=>{
 
 app.get("*", (_,res)=>res.sendFile(path.join(__dirname,"index.html")));
 
-dbInit().then(()=>app.listen(PORT,()=>console.log(`MOODE SEOUL running on ${PORT}`))).catch(err=>{console.error(err);process.exit(1)});
+dbInit().then(()=>{
+  app.listen(PORT,()=>console.log(`MOODE SEOUL running on ${PORT}`));
+  setInterval(autoCancelStaleOrders, 5 * 60 * 1000);
+}).catch(err=>{console.error(err);process.exit(1)});
