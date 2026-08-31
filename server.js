@@ -41,6 +41,10 @@ const defaultData = {
     bankName: "Хаан банк",
     bankAccount: "5071274473",
     bankHolder: "GANBOLD ENKHTSATSRALT",
+    krwBankName: "우리",
+    krwBankAccount: "1002861393082",
+    krwBankHolder: "Ganbold ENKHTSATSRALT",
+    krwCargoFee: "4500",
     instagram: "moode_seoul",
     facebook: "Moode Seoul",
     announcement: "Солонгосоос бүх төрлийн бренд бараа захиалга NIKE ADIDAS UNDER ARNOUR💜"
@@ -87,6 +91,9 @@ async function dbInit() {
   `);
   // Migrations for columns added after initial launch — safe to re-run.
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes jsonb DEFAULT '[]';`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS images jsonb DEFAULT '[]';`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_krw numeric DEFAULT 0;`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS pickup text DEFAULT '';`);
 
   const count = await pool.query("SELECT COUNT(*)::int AS n FROM admins");
   if (!count.rows[0].n) {
@@ -103,10 +110,26 @@ async function dbInit() {
 function normalizePhone(v) {
   return String(v || "").replace(/[^\d+]/g, "").replace(/^00/, "+");
 }
-function orderCode() {
-  const d = new Date();
-  const stamp = d.toISOString().replace(/\D/g, "").slice(0, 12);
-  return `MS-${stamp}-${Math.floor(100+Math.random()*900)}`;
+// Sequential order codes: onsarodor001 .. onsarodor900, then wraps back to 001.
+async function orderCode() {
+  let next = 1;
+  if (!usePostgres) {
+    const d = loadJson();
+    next = (Number(d.settings.orderSeq) || 0) + 1;
+    if (next > 900) next = 1;
+    d.settings.orderSeq = next;
+    saveJson(d);
+  } else {
+    const r = await pool.query(
+      `INSERT INTO settings(key,value) VALUES('orderSeq','1')
+       ON CONFLICT(key) DO UPDATE SET value =
+         CASE WHEN (settings.value)::int >= 900 THEN '1'
+              ELSE ((settings.value)::int + 1)::text END
+       RETURNING value`
+    );
+    next = Number(r.rows[0].value) || 1;
+  }
+  return "onsarodor" + String(next).padStart(3, "0");
 }
 function tokenFor(payload) { return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" }); }
 
@@ -147,37 +170,49 @@ function parseSizes(raw) {
 function totalFromSizes(sizes) {
   return sizes.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
 }
+function parseImages(raw) {
+  if (Array.isArray(raw)) return raw.filter(Boolean).slice(0, 6);
+  if (typeof raw === "string" && raw.trim()) {
+    try { const a = JSON.parse(raw); return Array.isArray(a) ? a.filter(Boolean).slice(0,6) : []; } catch { return []; }
+  }
+  return [];
+}
 
 async function listProducts(admin=false) {
   if (!usePostgres) {
     const list = loadJson().products.filter(p => admin || p.active !== false).sort((a,b)=>b.id-a.id);
-    return list.map(p => ({...p, sizes: parseSizes(p.sizes)}));
+    return list.map(p => ({...p, sizes: parseSizes(p.sizes), images: parseImages(p.images)}));
   }
   const q = admin ? "SELECT * FROM products ORDER BY id DESC" : "SELECT * FROM products WHERE active=true ORDER BY id DESC";
   const rows = (await pool.query(q)).rows;
-  return rows.map(p => ({...p, sizes: parseSizes(p.sizes)}));
+  return rows.map(p => ({...p, sizes: parseSizes(p.sizes), images: parseImages(p.images)}));
 }
 async function createProduct(p) {
   const sizes = parseSizes(p.sizes);
+  const images = parseImages(p.images);
+  const mainImage = p.image || images[0] || "";
   const stock = sizes.length ? totalFromSizes(sizes) : (Number(p.stock) || 0);
   if (!usePostgres) {
     const d=loadJson(); const id=(d.products[0]?.id||0)+1;
-    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,stock,category:p.category||"",image:p.image||"",active:p.active!==false,sizes};
+    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",image:mainImage,images,pickup:p.pickup||"",active:p.active!==false,sizes};
     d.products.push(item); saveJson(d); return item;
   }
-  return (await pool.query(`INSERT INTO products(name,description,price,stock,category,image,active,sizes)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,stock,p.category||"",p.image||"",p.active!==false,JSON.stringify(sizes)])).rows[0];
+  return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,image,images,pickup,active,sizes)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes)])).rows[0];
 }
 async function updateProduct(id,p) {
   const sizes = parseSizes(p.sizes);
+  const images = parseImages(p.images);
+  const mainImage = p.image || images[0] || "";
   const stock = sizes.length ? totalFromSizes(sizes) : Number(p.stock)||0;
   if (!usePostgres) {
     const d=loadJson(), i=d.products.findIndex(x=>x.id==id); if(i<0) throw Error("Product not found");
-    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),stock,sizes}; saveJson(d); return d.products[i];
+    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",sizes};
+    saveJson(d); return d.products[i];
   }
-  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,stock=$4,category=$5,image=$6,active=$7,sizes=$8 WHERE id=$9 RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,stock,p.category||"",p.image||"",p.active!==false,JSON.stringify(sizes),id])).rows[0];
+  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,image=$7,images=$8,pickup=$9,active=$10,sizes=$11 WHERE id=$12 RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),id])).rows[0];
 }
 async function deleteProduct(id) {
   if (!usePostgres) { const d=loadJson(); d.products=d.products.filter(x=>x.id!=id); saveJson(d); return; }
@@ -228,13 +263,13 @@ async function createOrder(o) {
   let created;
   if (!usePostgres) {
     const d=loadJson(), id=(d.orders[0]?.id||0)+1;
-    const item={id,order_code:orderCode(),...o,total:Number(o.total),paid:Number(o.paid||0),status:o.status||"registered",created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    const item={id,order_code:await orderCode(),...o,total:Number(o.total),paid:Number(o.paid||0),status:o.status||"registered",created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     d.orders.unshift(item);
     const ci=d.customers.findIndex(c=>c.phone===normalizePhone(o.customer_phone));
     if(ci<0) d.customers.push({id:d.customers.length+1,phone:normalizePhone(o.customer_phone),name:o.customer_name||""});
     saveJson(d); created = item;
   } else {
-    const code=orderCode();
+    const code=await orderCode();
     const r=await pool.query(`INSERT INTO orders(order_code,customer_phone,customer_name,items,total,paid,cargo_type,cargo_code,status,address,note)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [code,normalizePhone(o.customer_phone),o.customer_name||"",JSON.stringify(o.items||[]),Number(o.total)||0,Number(o.paid)||0,o.cargo_type||"air",o.cargo_code||"",o.status||"registered",o.address||"",o.note||""]);
@@ -374,6 +409,10 @@ app.post("/api/orders", async (req,res)=>{
 app.post("/api/admin/upload", auth("admin"), upload.single("image"), (req,res)=>{
   if(!req.file) return res.status(400).json({error:"Файл сонгоно уу"});
   res.json({url:"/uploads/"+req.file.filename});
+});
+app.post("/api/admin/upload-many", auth("admin"), upload.array("images", 6), (req,res)=>{
+  if(!req.files || !req.files.length) return res.status(400).json({error:"Файл сонгоно уу"});
+  res.json({urls: req.files.map(f=>"/uploads/"+f.filename)});
 });
 app.get("/api/admin/products", auth("admin"), async (_,res)=>res.json(await listProducts(true)));
 app.post("/api/admin/products", auth("admin"), async (req,res)=>res.status(201).json(await createProduct(req.body)));
