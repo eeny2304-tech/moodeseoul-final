@@ -77,7 +77,7 @@ async function submitOrder(){
   if(!phone)return alert("Утасны дугаараа оруулна уу.");
   const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
   try{
-    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size}))})});
+    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
     cart=[];
     closeCart();
     $("trackInput").value=phone;
@@ -119,7 +119,9 @@ function orderCard(o,i){
   const stages=["registered","transport","mongolia","delivery","delivered"];
   const isCancelled = o.status === "cancelled";
   const idx = stages.indexOf(o.status);
-  const img = (items[0] && items[0].image) || 'https://placehold.co/400x400?text=MOODE+SEOUL';
+  const first = items[0] || {};
+  const matched = first.product_id ? products.find(p => p.id == first.product_id) : null;
+  const img = first.image || (matched && matched.image) || 'https://placehold.co/400x400?text=MOODE+SEOUL';
 
   const stageHtml = isCancelled
     ? `<div class="order-cancelled">Захиалга цуцлагдсан</div>`
