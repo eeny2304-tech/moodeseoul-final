@@ -190,7 +190,24 @@
 </section>
 </main>
 
-<div id="cart" class="drawer hidden"><div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div><div id="cartItems"></div><input id="customerName" placeholder="Нэр"><input id="customerPhone" placeholder="Утасны дугаар"><input id="customerAddress" placeholder="Хаяг"><select id="cargoType"><option value="air">Агаар — 5-7 хоног</option><option value="ground">Газар — 14-16 хоног</option></select><button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button></div>
+<div id="cart" class="drawer hidden">
+  <div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div>
+  <div id="cartItems"></div>
+
+  <div class="cargo-note">
+    <b>🚚 Каргоны төлбөр тусдаа</b>
+    <p>Барааны үнэ болон каргоны төлбөр тусдаа. Бараа Монголд ирсний дараа карго тантай холбогдож, та каргоны төлбөрөө төлөөд бараагаа авна.</p>
+  </div>
+
+  <input id="customerName" placeholder="Нэр">
+  <input id="customerPhone" placeholder="Утасны дугаар">
+  <select id="cargoType" onchange="updateCargoBranches()">
+    <option value="air">✈️ Агаарын карго — 5-7 хоног (1кг 10,500₩)</option>
+    <option value="ground">🚚 Газрын карго — 14-16 хоног (1кг 2,700₩)</option>
+  </select>
+  <select id="cargoBranchSelect"></select>
+  <button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button>
+</div>
 
 <div id="orderSuccessModal" class="modal hidden">
   <div class="admin-box success-box">
