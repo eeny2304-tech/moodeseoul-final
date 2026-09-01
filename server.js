@@ -508,6 +508,39 @@ app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
   });
 });
 
+// Bulk-create orders typed directly into the admin panel (no spreadsheet needed).
+app.post("/api/admin/orders/bulk", auth("admin"), async (req,res)=>{
+  const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
+  if (!rows.length) return res.status(400).json({error:"Мөр алга байна"});
+
+  let created = 0, skipped = 0;
+  const order_codes = [];
+  for (const row of rows) {
+    const phone = String(row.phone||"").trim();
+    if (!phone) { skipped++; continue; }
+    const name = String(row.name||"").trim();
+    const productName = String(row.product||"").trim();
+    const size = String(row.size||"").trim();
+    const price = Number(row.price)||0;
+    const cargo_type = row.cargo_type==="ground" ? "ground" : "air";
+    const cargo_code = String(row.cargo_code||"").trim();
+
+    const order = await createOrder({
+      customer_phone: phone,
+      customer_name: name,
+      items: [{ name: productName || "Бараа", qty: 1, price, size: size||undefined }],
+      total: price,
+      cargo_type,
+      cargo_code,
+      address: "",
+      note: "Admin-аас бөөнөөр бүртгэсэн"
+    });
+    created++;
+    order_codes.push(order.order_code);
+  }
+  res.json({ created, skipped, order_codes });
+});
+
 app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"), async (req,res)=>{
   if (!XLSX) {
     return res.status(500).json({ error: "Серверт 'xlsx' сан суулгаагүй байна. package.json-д \"xlsx\": \"^0.18.5\" нэмээд дахин deploy хийнэ үү." });
