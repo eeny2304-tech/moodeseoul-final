@@ -8,6 +8,13 @@ const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Карго
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
+const CARGO_LABELS = {
+  air: "✈️ Агаар 5-7 хоног",
+  ground: "🚚 Газар 14-16 хоног",
+  delivery: "🛵 Монголд хүргэлт (7,000₮)",
+  pickup_kr: "🇰🇷 Солонгост хүлээн авна"
+};
+function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.air; }
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
 async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
@@ -61,7 +68,47 @@ function renderCart(){
     ? cart.map(x=>`<div class="cart-item"><span>${esc(x.name)}${x.size?` (${esc(x.size)})`:""} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`
     : `<p>Сагс хоосон байна.</p>`;
 }
-function openCart(){$("cart").classList.remove("hidden");renderCart();updateCargoBranches()} function closeCart(){$("cart").classList.add("hidden")}
+function openCart(){$("cart").classList.remove("hidden");renderCart();updateCargoBranches();updateCheckoutMode()} function closeCart(){$("cart").classList.add("hidden")}
+
+/* ---------------- Checkout mode by product category ----------------
+   mn_belen  → already in Mongolia: direct delivery (7,000₮), no cargo
+   kr_belen  → buyer chooses: pick up in Korea (address) or ship to Mongolia (cargo)
+   order     → ordered from Korea: cargo flow
+------------------------------------------------------------------- */
+function cartCategories(){
+  return [...new Set(cart.map(x=>x.category).filter(Boolean))];
+}
+
+function checkoutMode(){
+  const cats = cartCategories();
+  if(cats.length && cats.every(c=>c==="mn_belen")) return "mn_direct";
+  if(cats.includes("kr_belen") && ($("receiveWhere")?.value === "kr")) return "kr_direct";
+  return "cargo";
+}
+
+function updateCheckoutMode(){
+  if(!$("cart")) return;
+  const cats = cartCategories();
+  const showChoice = cats.includes("kr_belen") && !cats.every(c=>c==="mn_belen");
+  $("receiveChoice").classList.toggle("hidden", !showChoice);
+
+  const mode = checkoutMode();
+  const isCargo = mode === "cargo";
+
+  $("cargoBlock").classList.toggle("hidden", !isCargo);
+  $("cargoType").classList.toggle("hidden", !isCargo);
+  $("cargoBranchSelect").classList.toggle("hidden", !isCargo);
+  $("branchDetail").classList.toggle("hidden", !isCargo);
+
+  $("customerAddress").classList.toggle("hidden", isCargo);
+  $("deliveryNote").classList.toggle("hidden", mode !== "mn_direct");
+
+  if(mode === "mn_direct"){
+    $("customerAddress").placeholder = "Хүлээн авах хаяг (Монгол)";
+  } else if(mode === "kr_direct"){
+    $("customerAddress").placeholder = "Хүлээн авах хаяг (Солонгос)";
+  }
+}
 
 function togglePayDetail(){
   $("bankDetail").classList.toggle("hidden");
@@ -124,7 +171,7 @@ function pmSelectSize(btn){
 function renderPmGallery(){
   $("pmGallery").innerHTML=`
     ${pmImages.length>1?`<button class="pm-nav pm-prev" onclick="pmMove(-1)">‹</button>`:""}
-    <img src="${pmImages[pmIndex]}" alt="">
+    <img src="${pmImages[pmIndex]}" alt="" onclick="openLightbox(${pmIndex})">
     ${pmImages.length>1?`<button class="pm-nav pm-next" onclick="pmMove(1)">›</button>`:""}
   `;
   $("pmThumbs").innerHTML = pmImages.length>1
@@ -134,6 +181,50 @@ function renderPmGallery(){
 function pmMove(step){ pmIndex=(pmIndex+step+pmImages.length)%pmImages.length; renderPmGallery(); }
 function pmGo(i){ pmIndex=i; renderPmGallery(); }
 function closeProductModal(){ $("productModal").classList.add("hidden"); }
+
+/* ---------------- Fullscreen image lightbox ---------------- */
+let lbIndex = 0;
+
+function openLightbox(i){
+  lbIndex = i;
+  renderLightbox();
+  $("lightbox").classList.remove("hidden");
+}
+function renderLightbox(){
+  $("lbImage").src = pmImages[lbIndex];
+  $("lbCounter").textContent = pmImages.length>1 ? `${lbIndex+1} / ${pmImages.length}` : "";
+  const multi = pmImages.length > 1;
+  document.querySelectorAll(".lb-nav").forEach(b=>b.style.display = multi ? "flex" : "none");
+}
+function lbMove(e, step){
+  if(e) e.stopPropagation();
+  lbIndex = (lbIndex + step + pmImages.length) % pmImages.length;
+  renderLightbox();
+  pmIndex = lbIndex;
+  renderPmGallery();
+}
+function closeLightbox(e, force){
+  if(!force && e && e.target !== e.currentTarget) return;
+  if(e) e.stopPropagation();
+  $("lightbox").classList.add("hidden");
+}
+
+// swipe support on the lightbox
+(function(){
+  let startX = null;
+  document.addEventListener("touchstart", ev=>{
+    const lb = document.getElementById("lightbox");
+    if(!lb || lb.classList.contains("hidden")) return;
+    startX = ev.touches[0].clientX;
+  }, {passive:true});
+  document.addEventListener("touchend", ev=>{
+    const lb = document.getElementById("lightbox");
+    if(!lb || lb.classList.contains("hidden") || startX===null) return;
+    const dx = ev.changedTouches[0].clientX - startX;
+    if(Math.abs(dx) > 45) lbMove(null, dx < 0 ? 1 : -1);
+    startX = null;
+  }, {passive:true});
+})();
 
 function addCartFromModal(id){
   const p=products.find(x=>x.id==id); if(!p) return;
@@ -193,10 +284,30 @@ async function submitOrder(){
   if(!cart.length)return alert("Сагс хоосон байна.");
   const phone=$("customerPhone").value.trim();
   if(!phone)return alert("Утасны дугаараа оруулна уу.");
+
+  const mode = checkoutMode();
+  let address = "";
+  let cargo_type = "air";
+  let note = "";
+
+  if(mode === "cargo"){
+    address = $("cargoBranchSelect").value;
+    cargo_type = $("cargoType").value;
+  } else {
+    address = $("customerAddress").value.trim();
+    if(!address) return alert("Хүлээн авах хаягаа оруулна уу.");
+    if(mode === "mn_direct"){
+      cargo_type = "delivery";
+      note = "Монголд бэлэн — хүргэлт (7,000₮ тусдаа)";
+    } else {
+      cargo_type = "pickup_kr";
+      note = "Солонгост бэлэн — Солонгост хүлээн авна";
+    }
+  }
+
   const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
-  const branch=$("cargoBranchSelect").value;
   try{
-    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:branch,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
+    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address,cargo_type,note,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
     cart=[];
     closeCart();
     $("trackInput").value=phone;
@@ -265,7 +376,7 @@ function orderCard(o,i){
         <p>👤 ${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p>
         <p>💰 <b>${money(o.total)}</b> · Төлсөн: ${money(o.paid)}</p>
         <p>📦 ${items.map(it=>esc(it.name)+(it.size?` (${esc(it.size)})`:"")+" × "+it.qty).join(", ")}</p>
-        <p>${o.cargo_type==="air"?"✈️ Агаар 5-7 хоног":"🚚 Газар 14-16 хоног"} ${o.cargo_code?`· Код: <b>${esc(o.cargo_code)}</b>`:""}</p>
+        <p>${cargoLabel(o.cargo_type)} ${o.cargo_code?`· Код: <b>${esc(o.cargo_code)}</b>`:""}</p>
       </div>
     </div>
 
@@ -285,7 +396,7 @@ function openOrderDetail(i){
       <div><span>Хаяг</span><b>${esc(o.address||"—")}</b></div>
       <div><span>Нийт үнэ</span><b>${money(o.total)}</b></div>
       <div><span>Төлсөн</span><b>${money(o.paid)}</b></div>
-      <div><span>Хүргэлт</span><b>${o.cargo_type==="air"?"Агаар 5-7 хоног":"Газар 14-16 хоног"}</b></div>
+      <div><span>Хүргэлт</span><b>${cargoLabel(o.cargo_type)}</b></div>
       ${o.cargo_code?`<div><span>Карго код</span><b>${esc(o.cargo_code)}</b></div>`:""}
       <div><span>Төлөв</span><b>${STAGE_NAMES[o.status]||o.status}</b></div>
     </div>
@@ -551,7 +662,7 @@ function openAdminOrderDetail(id){
       <div><span>Утас</span><b>${esc(o.customer_phone)}</b></div>
       <div><span>Нийт үнэ</span><b>${money(o.total)}</b></div>
       <div><span>Үлдэгдэл</span><b class="${balance>0?'bal-due':''}">${money(balance)}</b></div>
-      <div><span>Хүргэлт</span><b>${o.cargo_type==="air"?"Агаар 5-7 хоног":"Газар 14-16 хоног"}</b></div>
+      <div><span>Хүргэлт</span><b>${cargoLabel(o.cargo_type)}</b></div>
       ${o.note?`<div><span>Тэмдэглэл</span><b>${esc(o.note)}</b></div>`:""}
     </div>
     <h3 class="section-sub">Бараанууд</h3>
