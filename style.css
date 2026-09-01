@@ -651,12 +651,18 @@ button.primary:active{opacity:.85;}
 .theme-dark .grid{padding:0 6px; position:relative;}
 
 /* ---------- hero social icons ---------- */
-.hero-social{display:flex; gap:10px; justify-content:center; margin:-4px 0 4px;}
-.hero-social a{
-  width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-  text-decoration:none; transition:transform .15s;
+.hero-social{display:flex; gap:10px; justify-content:center; margin:-4px 0 4px; flex-wrap:wrap;}
+.soc-link{
+  display:flex; align-items:center; gap:8px; text-decoration:none;
+  background:var(--bg-card); border:1px solid var(--line); border-radius:999px;
+  padding:6px 14px 6px 6px; transition:transform .15s;
 }
-.hero-social a:active{transform:scale(.92);}
+.soc-link:active{transform:scale(.96);}
+.soc-ic{
+  width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+  flex:0 0 auto;
+}
+.soc-name{font-size:.76rem; font-weight:700; color:var(--ink);}
 .soc-fb{background:#1877F2;}
 .soc-ig{background:linear-gradient(135deg,#f9ce34,#ee2a7b 55%,#6228d7);}
 
