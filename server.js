@@ -110,26 +110,34 @@ async function dbInit() {
 function normalizePhone(v) {
   return String(v || "").replace(/[^\d+]/g, "").replace(/^00/, "+");
 }
-// Sequential order codes: onsarodor001 .. onsarodor900, then wraps back to 001.
+// Order codes reset daily: YYYYMMDD001 .. YYYYMMDD100, wrapping back to 001 if exceeded.
+function todayStamp() {
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+}
 async function orderCode() {
-  let next = 1;
+  const today = todayStamp();
+  let seq = 1;
   if (!usePostgres) {
     const d = loadJson();
-    next = (Number(d.settings.orderSeq) || 0) + 1;
-    if (next > 900) next = 1;
-    d.settings.orderSeq = next;
+    if (d.settings.orderSeqDate === today) {
+      seq = (Number(d.settings.orderSeq) || 0) + 1;
+      if (seq > 100) seq = 1;
+    }
+    d.settings.orderSeqDate = today;
+    d.settings.orderSeq = seq;
     saveJson(d);
   } else {
-    const r = await pool.query(
-      `INSERT INTO settings(key,value) VALUES('orderSeq','1')
-       ON CONFLICT(key) DO UPDATE SET value =
-         CASE WHEN (settings.value)::int >= 900 THEN '1'
-              ELSE ((settings.value)::int + 1)::text END
-       RETURNING value`
-    );
-    next = Number(r.rows[0].value) || 1;
+    const dateRow = (await pool.query("SELECT value FROM settings WHERE key='orderSeqDate'")).rows[0];
+    if (dateRow && dateRow.value === today) {
+      const seqRow = (await pool.query("SELECT value FROM settings WHERE key='orderSeq'")).rows[0];
+      seq = (Number(seqRow?.value) || 0) + 1;
+      if (seq > 100) seq = 1;
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('orderSeqDate',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[today]);
+    await pool.query("INSERT INTO settings(key,value) VALUES('orderSeq',$1) ON CONFLICT(key) DO UPDATE SET value=$1",[String(seq)]);
   }
-  return "onsarodor" + String(next).padStart(3, "0");
+  return today + String(seq).padStart(3, "0");
 }
 function tokenFor(payload) { return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" }); }
 
