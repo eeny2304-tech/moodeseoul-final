@@ -606,3 +606,24 @@ button.primary:active{opacity:.85;}
   background:var(--bg-card-2); color:var(--muted); cursor:pointer; font-size:.75rem;
 }
 .row-x:hover{color:#e11d48; border-color:#e11d48;}
+
+/* ---------- admin orders/customers table ---------- */
+.orders-table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px;}
+.orders-table{border-collapse:collapse; width:100%; min-width:520px; font-size:.78rem;}
+.orders-table th{
+  background:var(--bg-card-2); font-size:.66rem; text-transform:uppercase; letter-spacing:.03em;
+  color:var(--muted); padding:9px 8px; text-align:left; white-space:nowrap;
+}
+.orders-table td{padding:8px; border-top:1px solid var(--line); vertical-align:middle;}
+.orders-table td.ot-code{font-weight:700; color:var(--ink); white-space:nowrap;}
+.orders-table td small{color:var(--muted); font-size:.68rem;}
+.ot-actions{display:flex; gap:6px; white-space:nowrap;}
+.ot-actions button{
+  padding:6px 10px; border-radius:6px; border:1px solid var(--line);
+  background:var(--bg-card-2); color:var(--ink); font-size:.7rem; cursor:pointer;
+}
+.ot-actions .row-x{color:#e11d48; border-color:rgba(225,29,72,.35);}
+.row-x-full{
+  flex:1; padding:10px; border-radius:8px; border:1px solid rgba(225,29,72,.4);
+  background:rgba(225,29,72,.08); color:#e11d48; font-weight:700; font-size:.75rem; cursor:pointer;
+}
