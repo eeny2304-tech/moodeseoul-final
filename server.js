@@ -500,8 +500,8 @@ app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
 
   res.json({
     orders: orders.length,
-    active: orders.filter(o=>!["delivered","cancelled"].includes(o.status)).length,
-    delivered: orders.filter(o=>o.status==="delivered").length,
+    active: orders.filter(o=>o.status!=="cancelled").length,
+    delivered: orders.filter(o=>o.status==="mongolia").length,
     revenue,
     products: products.length,
     monthly
