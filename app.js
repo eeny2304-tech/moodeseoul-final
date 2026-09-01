@@ -1,3 +1,4 @@
+
 let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
 let myOrders=[];
 
@@ -61,7 +62,7 @@ function renderCart(){
     ? cart.map(x=>`<div class="cart-item"><span>${esc(x.name)}${x.size?` (${esc(x.size)})`:""} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`
     : `<p>Сагс хоосон байна.</p>`;
 }
-function openCart(){$("cart").classList.remove("hidden");renderCart()} function closeCart(){$("cart").classList.add("hidden")}
+function openCart(){$("cart").classList.remove("hidden");renderCart();updateCargoBranches()} function closeCart(){$("cart").classList.add("hidden")}
 
 function togglePayDetail(){
   $("bankDetail").classList.toggle("hidden");
@@ -137,13 +138,33 @@ function scrollToContact(e){ if(e) e.preventDefault(); $("contactBlock").scrollI
 function openFaq(e){ if(e) e.preventDefault(); $("faqModal").classList.remove("hidden"); }
 function closeFaq(){ $("faqModal").classList.add("hidden"); }
 
+const CARGO_BRANCHES = {
+  air: [
+    {name:"1-р салбар — Баянгол дүүрэг (БГД)", detail:"3,4-р хороолол (Таван-эрдэнэ) хүнсний захын хажууд, 44-р байрны 1 давхарт · 11-360880"},
+    {name:"2-р салбар — Сонгинохайрхан дүүрэг (СХД)", detail:"1-р хороолол (Сапоро \"Хаан банк\"-ны баруун талд), Цамбагярав 6-р байрны 1 давхарт · 7018-3765"},
+    {name:"3-р салбар — Баянзүрх дүүрэг (БЗД)", detail:"Сансар (Сансарын Түйн дээгүүр \"Алтан жолоо\" группийн урд), 2 давхар байрны 2 давхарт · 11-457186"},
+    {name:"4-р салбар — Хан-Уул дүүрэг (ХУД)", detail:"Хоум Плазалийн баруун талд, Төв цэнгэлдэхийн хашааны дотор, урд хийнүүр 9-р павильон · 11-301710"},
+    {name:"5-р салбар — Хан-Уул дүүрэг (ХУД)", detail:"Нисэхийн-Сонсголон колонкийн зүүн эргэт иржийн Нисэхийн Удирдах газрын дэргэд МК Төв · 7277-9999"}
+  ],
+  ground: [
+    {name:"Oneway Cargo", detail:"БГД, 3-р эмнэлгийн хойно \"Ачтан\" эмнэлгийн баруун талд, 4 давхар тоосгон байрлагын 1 давхарт · 8601-9921 / 8602-9921"}
+  ]
+};
+
+function updateCargoBranches(){
+  const type=$("cargoType").value;
+  const list=CARGO_BRANCHES[type]||[];
+  $("cargoBranchSelect").innerHTML=list.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}">${esc(b.name)}</option>`).join("");
+}
+
 async function submitOrder(){
   if(!cart.length)return alert("Сагс хоосон байна.");
   const phone=$("customerPhone").value.trim();
   if(!phone)return alert("Утасны дугаараа оруулна уу.");
   const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  const branch=$("cargoBranchSelect").value;
   try{
-    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:$("customerAddress").value,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
+    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address:branch,cargo_type:$("cargoType").value,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
     cart=[];
     closeCart();
     $("trackInput").value=phone;
