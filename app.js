@@ -93,8 +93,8 @@ function openProductModal(id){
       ${Number(p.price_krw)>0?`<span class="pm-krw">${won(p.price_krw)}</span>`:""}
     </div>
     ${sizes.length?`
-      <h3 class="section-sub">Хэмжээ ба үлдэгдэл</h3>
-      <div class="pm-sizes">${sizes.map(sz=>`<span class="pm-size ${Number(sz.qty)<=0?'is-out':''}">${esc(sz.size)} · ${Number(sz.qty)>0?sz.qty+' ширхэг':'дууссан'}</span>`).join("")}</div>
+      <h3 class="section-sub">Хэмжээ сонгох</h3>
+      <div class="pm-sizes">${sizes.map((sz,i)=>`<button type="button" class="pm-size ${Number(sz.qty)<=0?'is-out':''}" ${Number(sz.qty)<=0?'disabled':''} data-size="${esc(sz.size)}" onclick="pmSelectSize(this)">${esc(sz.size)} · ${Number(sz.qty)>0?sz.qty+' ширхэг':'дууссан'}</button>`).join("")}</div>
     `:`<p class="pm-stock">${totalStock>0?"Бэлэн: "+totalStock+" ширхэг":"Дууссан"}</p>`}
     ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
     <div class="pm-cargo">
@@ -104,7 +104,21 @@ function openProductModal(id){
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
   `;
+  pmSelectedSize = sizes.length ? (sizes.find(s=>Number(s.qty)>0)?.size ?? null) : null;
+  // pre-select the first in-stock size so "Сагсанд нэмэх" always works
+  if(pmSelectedSize){
+    const btn=[...document.querySelectorAll("#pmBody .pm-size")].find(b=>b.dataset.size===String(pmSelectedSize));
+    if(btn) btn.classList.add("selected");
+  }
   $("productModal").classList.remove("hidden");
+}
+
+let pmSelectedSize = null;
+
+function pmSelectSize(btn){
+  document.querySelectorAll("#pmBody .pm-size").forEach(b=>b.classList.remove("selected"));
+  btn.classList.add("selected");
+  pmSelectedSize = btn.dataset.size;
 }
 
 function renderPmGallery(){
@@ -122,8 +136,16 @@ function pmGo(i){ pmIndex=i; renderPmGallery(); }
 function closeProductModal(){ $("productModal").classList.add("hidden"); }
 
 function addCartFromModal(id){
+  const p=products.find(x=>x.id==id); if(!p) return;
+  const sizes=Array.isArray(p.sizes)?p.sizes:[];
+  if(sizes.length && !pmSelectedSize){
+    return alert("Хэмжээгээ сонгоно уу.");
+  }
+  const existing=cart.find(i=>i.id==id && (i.size||"")===(pmSelectedSize||""));
+  if(existing){ existing.qty++; } else { cart.push({...p, qty:1, size:pmSelectedSize||undefined}); }
   closeProductModal();
-  addCart(id);
+  renderCart();
+  openCart();
 }
 
 /* ---------------- Footer menu links ---------------- */
@@ -154,6 +176,17 @@ function updateCargoBranches(){
   const type=$("cargoType").value;
   const list=CARGO_BRANCHES[type]||[];
   $("cargoBranchSelect").innerHTML=list.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}">${esc(b.name)}</option>`).join("");
+  showBranchDetail();
+}
+
+function showBranchDetail(){
+  const box=$("branchDetail");
+  if(!box) return;
+  const type=$("cargoType").value;
+  const list=CARGO_BRANCHES[type]||[];
+  const selectedName=($("cargoBranchSelect").value||"").split(" — ")[0];
+  const b=list.find(x=>x.name===selectedName);
+  box.innerHTML = b ? `<b>📍 ${esc(b.name)}</b><p>${esc(b.detail)}</p>` : "";
 }
 
 async function submitOrder(){
@@ -508,6 +541,7 @@ function openAdminOrderDetail(id){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const created=o.created_at?new Date(o.created_at).toLocaleString("mn-MN"):"—";
   const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
+  const allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
 
   $("orderDetailContent").innerHTML=`
     <p class="success-code">Захиалгын код<br><b>${esc(o.order_code)}</b></p>
@@ -529,39 +563,24 @@ function openAdminOrderDetail(id){
       <input id="mpaid" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
     </div>
     <div class="admin-row">
-      <select id="mtype" onchange="updateAdminCargoBranches()">
-        <option value="air" ${o.cargo_type==="air"?"selected":""}>✈️ Агаар (10,500₩/кг)</option>
-        <option value="ground" ${o.cargo_type==="ground"?"selected":""}>🚚 Газар (2,700₩/кг)</option>
-      </select>
       <input id="mcargo" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
-    </div>
-    <div class="admin-row">
-      <select id="maddr"></select>
+      <select id="maddr">
+        <option value="">— Карго салбар сонгох —</option>
+        ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
+      </select>
     </div>
     <div class="admin-row">
       <button class="primary" onclick="saveOrderFromModal(${o.id})">Шинэчлэх</button>
       <button class="row-x-full" onclick="deleteOrderAdmin(${o.id})">Устгах</button>
     </div>
   `;
-  updateAdminCargoBranches(o.address);
   $("orderDetailModal").classList.remove("hidden");
-}
-
-function updateAdminCargoBranches(preselectAddress){
-  const type=$("mtype").value;
-  const list=CARGO_BRANCHES[type]||[];
-  $("maddr").innerHTML=list.map(b=>{
-    const val=`${b.name} — ${b.detail}`;
-    const sel=preselectAddress && preselectAddress.startsWith(b.name) ? "selected":"";
-    return `<option value="${esc(val)}" ${sel}>${esc(b.name)}</option>`;
-  }).join("");
 }
 
 async function saveOrderFromModal(id){
   try{
     await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({
-      status:$("mst").value, paid:$("mpaid").value, cargo_code:$("mcargo").value,
-      address:$("maddr").value, cargo_type:$("mtype").value
+      status:$("mst").value, paid:$("mpaid").value, cargo_code:$("mcargo").value, address:$("maddr").value
     })});
     closeOrderDetail();
     adminTab("orders");
@@ -628,6 +647,7 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
+  window.__allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
   $("ordersAdminList").innerHTML = os.length ? `
     <div class="orders-table-wrap">
       <table class="orders-table">
