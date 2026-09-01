@@ -3,7 +3,7 @@ let myOrders=[];
 
 const $=id=>document.getElementById(id);
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
-const STAGE_NAMES = { registered:"Бүртгэл", transport:"Тээвэр", mongolia:"Монголд", delivery:"Хүргэлт", delivered:"Дууссан" };
+const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Каргонд өгсөн", mongolia:"Монголд буусан", cancelled:"Цуцлагдсан" };
 
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
@@ -202,7 +202,7 @@ async function trackOrders(){
 
 function orderCard(o,i){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
-  const stages=["registered","transport","mongolia","delivery","delivered"];
+  const stages=["registered","transport","mongolia"];
   const isCancelled = o.status === "cancelled";
   const idx = stages.indexOf(o.status);
   const first = items[0] || {};
@@ -289,7 +289,7 @@ async function adminTab(tab){
       const unpaid=os.filter(o=>o.status!=="cancelled").reduce((a,o)=>a+Math.max(0,Number(o.total||0)-Number(o.paid||0)),0);
       const cancelled=os.filter(o=>o.status==="cancelled").length;
 
-      const counts={registered:0,transport:0,mongolia:0,delivery:0,delivered:0,cancelled:0};
+      const counts={registered:0,transport:0,mongolia:0,cancelled:0};
       os.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
 
       const monthly=s.monthly||[];
@@ -310,7 +310,7 @@ async function adminTab(tab){
         <div class="grid">
           <div class="admin-card stat-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div>
           <div class="admin-card stat-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div>
-          <div class="admin-card stat-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div>
+          <div class="admin-card stat-card"><b>Монголд буусан</b><h2>${s.delivered}</h2></div>
           <div class="admin-card stat-card"><b>Цуцлагдсан</b><h2>${cancelled}</h2></div>
         </div>
 
@@ -589,6 +589,7 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
+  const allBranches=[...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
   $("ordersAdminList").innerHTML = os.length ? os.map(o=>{
     const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
     return `<div class="admin-card">
@@ -599,10 +600,13 @@ function renderOrdersAdminList(os){
       <p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p>
       <p>${money(o.total)} · төлсөн ${money(o.paid)} ${balance>0?`· <b class="bal-due">үлдэгдэл ${money(balance)}</b>`:`· <b class="bal-ok">төлөгдсөн</b>`}</p>
       <div class="admin-row">
-        <select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
+        <select id="st${o.id}">${["registered","transport","mongolia","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
         <input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
         <input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
-        <input id="addr${o.id}" value="${esc(o.address||"")}" placeholder="Хүргэлтийн хаяг">
+        <select id="addr${o.id}">
+          <option value="">— Карго салбар сонгох —</option>
+          ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
+        </select>
       </div>
       <div class="admin-row">
         <button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button>
