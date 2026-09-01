@@ -702,3 +702,36 @@ button.primary:active{opacity:.85;}
 }
 .branch-detail b{display:block; font-size:.8rem; color:var(--ink); margin-bottom:4px;}
 .branch-detail p{font-size:.74rem; color:var(--muted); margin:0; line-height:1.5;}
+
+/* ---------- fullscreen image lightbox ---------- */
+.lightbox{
+  position:fixed; inset:0; z-index:120;
+  background:rgba(0,0,0,.92);
+  display:flex; align-items:center; justify-content:center;
+}
+.lightbox.hidden{display:none !important;}
+.lb-stage{
+  max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;
+  padding:20px;
+}
+.lb-stage img{
+  max-width:100%; max-height:86vh; object-fit:contain; border-radius:8px;
+  -webkit-user-select:none; user-select:none;
+}
+.lb-close{
+  position:absolute; top:14px; right:16px; z-index:2;
+  width:40px; height:40px; border-radius:50%; border:0; cursor:pointer;
+  background:rgba(255,255,255,.15); color:#fff; font-size:1.5rem; line-height:1;
+}
+.lb-nav{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:2;
+  width:44px; height:44px; border-radius:50%; border:0; cursor:pointer;
+  background:rgba(255,255,255,.15); color:#fff; font-size:1.6rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.lb-prev{left:12px;} .lb-next{right:12px;}
+.lb-counter{
+  position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+  color:rgba(255,255,255,.85); font-size:.8rem; letter-spacing:.05em;
+}
+.pm-gallery img{cursor:zoom-in;}
