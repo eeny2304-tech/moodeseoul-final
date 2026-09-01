@@ -14,7 +14,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const DATA_DIR = path.join(__dirname, "data");
-const UPLOAD_DIR = path.join(__dirname, "public", "uploads");
+// Prefer Railway's mounted volume path so uploads survive redeploys.
+const UPLOAD_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, "public", "uploads");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
