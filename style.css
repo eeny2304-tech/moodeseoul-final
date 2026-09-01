@@ -578,3 +578,11 @@ button.primary:active{opacity:.85;}
 .krw-note{font-size:.72rem; color:var(--muted); line-height:1.7; margin:10px 0 0;}
 .krw-note b{color:var(--pink);}
 .krw-pay{margin-top:14px;}
+
+/* ---------- cart cargo note ---------- */
+.cargo-note{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:6px;
+}
+.cargo-note b{font-size:.8rem; color:var(--ink); display:block; margin-bottom:6px;}
+.cargo-note p{font-size:.74rem; color:var(--muted); line-height:1.55; margin:0;}
