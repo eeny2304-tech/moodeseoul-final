@@ -652,19 +652,19 @@ button.primary:active{opacity:.85;}
 
 /* ---------- hero social icons ---------- */
 .hero-social{display:flex; gap:10px; justify-content:center; margin:-4px 0 4px; flex-wrap:wrap;}
-.soc-link{
-  display:flex; align-items:center; gap:8px; text-decoration:none;
-  background:var(--bg-card); border:1px solid var(--line); border-radius:999px;
-  padding:6px 14px 6px 6px; transition:transform .15s;
+.soc-btn{
+  display:flex; align-items:center; gap:9px; text-decoration:none;
+  border-radius:999px; padding:11px 20px 11px 11px; transition:transform .15s;
+  box-shadow:0 4px 14px rgba(0,0,0,.12);
 }
-.soc-link:active{transform:scale(.96);}
+.soc-btn:active{transform:scale(.96);}
 .soc-ic{
-  width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;
-  flex:0 0 auto;
+  width:30px; height:30px; border-radius:50%; background:#fff;
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto;
 }
-.soc-name{font-size:.76rem; font-weight:700; color:var(--ink);}
-.soc-fb{background:#1877F2;}
-.soc-ig{background:linear-gradient(135deg,#f9ce34,#ee2a7b 55%,#6228d7);}
+.soc-name{font-size:.85rem; font-weight:800; color:#fff;}
+.soc-btn-fb{background:#1877F2;}
+.soc-btn-ig{background:linear-gradient(135deg,#f9ce34,#ee2a7b 55%,#6228d7);}
 
 /* ---------- track section accent (stand out from surrounding white) ---------- */
 .track-accent{
