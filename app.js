@@ -1,4 +1,3 @@
-
 let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
 let myOrders=[];
 
@@ -388,10 +387,31 @@ async function adminTab(tab){
         <div class="admin-row">
           <input id="orderSearch" placeholder="Утас, нэр, захиалгын кодоор хайх" oninput="filterOrdersAdmin()">
         </div>
+
+        <h3 class="section-sub">⚡ Түргэн бүртгэл</h3>
+        <p class="muted-note">Spreadsheet-с шууд хуулж тавьж болно — мөр бүр нэг захиалга.</p>
+        <div class="bulk-table-wrap">
+          <table class="bulk-table" id="bulkTable">
+            <thead><tr>
+              <th>Утас</th><th>Нэр</th><th>Бараа</th><th>Хэмжээ</th><th>Үнэ</th><th>Карго</th><th>Код</th><th></th>
+            </tr></thead>
+            <tbody id="bulkTableBody"></tbody>
+          </table>
+        </div>
+        <div class="admin-row">
+          <button type="button" class="file-btn" onclick="addBulkRow()">+ Мөр нэмэх</button>
+          <button class="primary" onclick="submitBulkOrders()">Бүх мөрийг бүртгэх</button>
+        </div>
+
+        <h3 class="section-sub">Эсвэл Excel файлаар</h3>
         <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
         <p class="muted-note">Excel баганууд: Утас, Нэр, Карго, Бараа, Үнэ</p>
+
+        <h3 class="section-sub">Захиалгын жагсаалт</h3>
         <div id="ordersAdminList"></div>`;
       renderOrdersAdminList(os);
+      bulkRows=[];
+      addBulkRow(); addBulkRow(); addBulkRow();
     }
 
     if(tab==="customers"){
@@ -507,6 +527,65 @@ function openAdminOrderDetail(id){
     ${items.map(it=>`<div class="admin-card"><b>${esc(it.name)}</b>${it.size?` · Хэмжээ: ${esc(it.size)}`:""} · ${it.qty} ширхэг · ${money(it.price)}</div>`).join("")}
   `;
   $("orderDetailModal").classList.remove("hidden");
+}
+
+let bulkRows = [];
+let bulkRowSeq = 0;
+
+function addBulkRow(){
+  const id = ++bulkRowSeq;
+  bulkRows.push(id);
+  const tr = document.createElement("tr");
+  tr.id = "brow-"+id;
+  tr.innerHTML = `
+    <td><input class="b-phone" placeholder="9911xxxx"></td>
+    <td><input class="b-name" placeholder="Нэр"></td>
+    <td><input class="b-product" placeholder="nike tedil"></td>
+    <td><input class="b-size" placeholder="40"></td>
+    <td><input class="b-price" type="number" placeholder="150000"></td>
+    <td>
+      <select class="b-cargo">
+        <option value="air">Агаар</option>
+        <option value="ground">Газар</option>
+      </select>
+    </td>
+    <td><input class="b-code" placeholder="код"></td>
+    <td><button type="button" class="row-x" onclick="removeBulkRow(${id})">✕</button></td>
+  `;
+  $("bulkTableBody").appendChild(tr);
+}
+
+function removeBulkRow(id){
+  const el = document.getElementById("brow-"+id);
+  if (el) el.remove();
+  bulkRows = bulkRows.filter(x=>x!==id);
+}
+
+async function submitBulkOrders(){
+  const trs = [...document.querySelectorAll("#bulkTableBody tr")];
+  const rows = trs.map(tr=>({
+    phone: tr.querySelector(".b-phone").value.trim(),
+    name: tr.querySelector(".b-name").value.trim(),
+    product: tr.querySelector(".b-product").value.trim(),
+    size: tr.querySelector(".b-size").value.trim(),
+    price: tr.querySelector(".b-price").value,
+    cargo_type: tr.querySelector(".b-cargo").value,
+    cargo_code: tr.querySelector(".b-code").value.trim()
+  })).filter(r=>r.phone);
+
+  if (!rows.length) return alert("Дор хаяж нэг мөрөнд утасны дугаар оруулна уу.");
+
+  try{
+    const r = await fetch("/api/admin/orders/bulk", {
+      method:"POST",
+      headers:{"Content-Type":"application/json", Authorization:"Bearer "+adminToken},
+      body: JSON.stringify({rows})
+    });
+    const d = await r.json();
+    if (!r.ok) throw Error(d.error||"Алдаа гарлаа");
+    alert(`Бүртгэгдсэн: ${d.created}, алгассан: ${d.skipped}`);
+    adminTab("orders");
+  }catch(e){ alert(e.message); }
 }
 
 function renderOrdersAdminList(os){
