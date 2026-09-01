@@ -161,6 +161,21 @@
       </div>
     </div>
 
+    <div class="pay-row" id="krwRow" onclick="toggleKrwDetail()">
+      <span class="pay-ic">💳</span>
+      <div><b>Солонгос данс (₩)</b><small>Дарж дэлгэрэнгүй харах</small></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="pay-detail hidden" id="krwDetail">
+      <div class="success-bank">
+        <div><span>Банк</span><b>우리</b></div>
+        <div><span>Дансны дугаар</span><b>1002861393082</b></div>
+        <div><span>Хүлээн авагч</span><b>Ganbold ENKHTSATSRALT</b></div>
+      </div>
+      <p class="krw-note">Гүйлгээ хийсний дараа <b>screenshot-оо явуулаарай</b> 🫶<br>
+      Та барааныхаа үнэн дээр нэмээд <b>тээврийн 4,500₩</b> нэмж явуулаарай 🌸</p>
+    </div>
+
     <div class="pay-row"><span class="pay-ic">⋯</span><div><b>Бусад</b><small>Гүйлгээний баримт илгээнэ үү</small></div><span class="arrow">›</span></div>
   </div>
   <div class="pay-info">
@@ -190,6 +205,17 @@
       </div>
       <p class="success-note">Гүйлгээний утга дээр <b>утасны дугаар</b> болон <b>захиалгын кодоо</b> заавал бичиж төлбөрөө шилжүүлнэ үү. <b>30 минутын дотор</b> төлбөр ороогүй бол захиалга автоматаар цуцлагдана.</p>
     </div>
+
+    <div class="success-pay krw-pay">
+      <p class="success-label">💳 Солонгос данс (₩)</p>
+      <div class="success-bank">
+        <div><span>Банк</span><b>우리</b></div>
+        <div><span>Дансны дугаар</span><b>1002861393082</b></div>
+        <div><span>Хүлээн авагч</span><b>Ganbold ENKHTSATSRALT</b></div>
+      </div>
+      <p class="success-note">Гүйлгээ хийсний дараа <b>screenshot-оо явуулаарай</b> 🫶<br>
+      Та барааныхаа үнэн дээр нэмээд <b>тээврийн 4,500₩</b> нэмж явуулаарай 🌸</p>
+    </div>
     <button class="primary" onclick="closeOrderSuccess()">Ойлголоо</button>
   </div>
 </div>
@@ -209,6 +235,15 @@
     <div class="faq-item"><b>Төлбөрөө хэрхэн шилжүүлэх вэ?</b><p>Захиалга баталгаажсаны дараа гарч ирэх Хаан банкны дансаар шилжүүлнэ. Гүйлгээний утга дээр утасны дугаар болон захиалгын кодоо заавал бичнэүү.</p></div>
     <div class="faq-item"><b>Захиалгаа хэрхэн хянах вэ?</b><p>Нүүр хуудасны "Хайх" хэсэгт захиалга өгсөн утасны дугаараа оруулж хайна уу.</p></div>
     <div class="faq-item"><b>Төлбөрөө хугацаанд нь шилжүүлээгүй бол яах вэ?</b><p>Захиалга өгсний дараа 30 минутын дотор төлбөр ороогүй тохиолдолд захиалга автоматаар цуцлагдана.</p></div>
+  </div>
+</div>
+
+<div id="productModal" class="modal hidden">
+  <div class="admin-box product-modal-box">
+    <div class="drawer-head"><h2 id="pmName">Бараа</h2><button onclick="closeProductModal()">×</button></div>
+    <div id="pmGallery" class="pm-gallery"></div>
+    <div id="pmThumbs" class="pm-thumbs"></div>
+    <div id="pmBody"></div>
   </div>
 </div>
 
