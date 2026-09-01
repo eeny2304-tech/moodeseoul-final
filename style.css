@@ -93,13 +93,13 @@ header.top .icon{
 .hero > div:first-child > p{color:var(--muted); font-size:.92rem; max-width:380px; margin:0 auto; line-height:1.55;}
 
 .hero-card{
-  display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center;
   background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius);
-  padding:16px 22px;
+  padding:10px 16px;
 }
-.hero-card b{font-size:.78rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); width:100%;}
-.hero-card strong{font-size:.95rem; color:var(--ink); font-weight:700;}
-.hero-card span{font-size:.7rem; color:var(--muted); margin-right:10px;}
+.hero-card b{font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); width:100%;}
+.hero-card strong{font-size:.82rem; color:var(--ink); font-weight:700;}
+.hero-card span{font-size:.62rem; color:var(--muted); margin-right:8px;}
 
 /* ---------- track / search ---------- */
 .track{
@@ -135,7 +135,7 @@ button.primary:active{opacity:.85;}
 /* ---------- section title ---------- */
 .section-title{
   display:flex; align-items:center; justify-content:space-between;
-  padding:0 20px; margin:34px 0 16px;
+  padding:0 20px; margin:14px 0 16px;
 }
 .section-title h2{font-size:1.15rem; font-weight:800;}
 .section-title button{
@@ -632,3 +632,20 @@ button.primary:active{opacity:.85;}
   flex:1; padding:10px; border-radius:8px; border:1px solid rgba(225,29,72,.4);
   background:rgba(225,29,72,.08); color:#e11d48; font-weight:700; font-size:.75rem; cursor:pointer;
 }
+
+/* ---------- dark accent panel (product listing + cart) ---------- */
+.theme-dark{
+  --bg-card:#16161c; --bg-card-2:#1c1c24; --line:#2a2a33; --ink:#f4f4f6; --muted:#96969f;
+  background:#0b0b0e; color:var(--ink);
+  border-radius:22px; margin:0 16px 30px; padding:22px 14px;
+  position:relative; overflow:hidden;
+}
+.theme-dark::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(400px 260px at 10% 0%, rgba(41,211,208,.14), transparent 60%),
+    radial-gradient(400px 260px at 90% 100%, rgba(238,95,167,.14), transparent 60%);
+}
+.theme-dark .section-title{padding:0 6px; margin:0 0 16px; position:relative;}
+.theme-dark .product-search{margin:0 6px 16px; width:calc(100% - 12px); position:relative;}
+.theme-dark .grid{padding:0 6px; position:relative;}
