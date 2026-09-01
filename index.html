@@ -199,7 +199,7 @@
 </section>
 </main>
 
-<div id="cart" class="drawer hidden theme-dark">
+<div id="cart" class="drawer hidden">
   <div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div>
   <div id="cartItems"></div>
 
@@ -214,7 +214,8 @@
     <option value="air">✈️ Агаарын карго — 5-7 хоног (1кг 10,500₩)</option>
     <option value="ground">🚚 Газрын карго — 14-16 хоног (1кг 2,700₩)</option>
   </select>
-  <select id="cargoBranchSelect"></select>
+  <select id="cargoBranchSelect" onchange="showBranchDetail()"></select>
+  <div id="branchDetail" class="branch-detail"></div>
   <button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button>
 </div>
 
