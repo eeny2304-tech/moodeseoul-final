@@ -405,7 +405,7 @@ async function adminTab(tab){
 
         <h3 class="section-sub">Эсвэл Excel файлаар</h3>
         <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
-        <p class="muted-note">Excel баганууд: Утас, Нэр, Карго, Бараа, Үнэ</p>
+        <p class="muted-note">Толгой мөр шаардлагагүй. Баганы дараалал: Нэр → Утас → Бараа → Хэмжээ → Үнэ → Карго (Air/Ground). Систем утасны дугаарыг олж, түүнийг тойрсон баганаас автоматаар танина.</p>
 
         <h3 class="section-sub">Захиалгын жагсаалт</h3>
         <div id="ordersAdminList"></div>`;
