@@ -330,11 +330,16 @@ button.primary:active{opacity:.85;}
 }
 .order-detail-box{border-color:rgba(238,95,167,.35);}
 
+/* Ensure the order-detail modal always renders above the admin panel modal,
+   since both can be open at the same time (admin clicking "Засах"). */
+#orderDetailModal{z-index:90;}
+
 /* ---------- admin: full-screen ---------- */
 .admin-fullscreen{padding:0; align-items:stretch; justify-content:stretch; backdrop-filter:none;}
 .admin-box-full{
   width:100%; height:100%; max-height:none; max-width:none;
   border-radius:0; border:0; padding:18px;
+  overflow-x:hidden; /* keep wide inner tables scrolling within their own wrapper, not the whole panel */
 }
 .admin-box-full .drawer-head{
   position:sticky; top:-18px; background:var(--bg-card); padding:14px 0 14px;
@@ -626,43 +631,4 @@ button.primary:active{opacity:.85;}
 .row-x-full{
   flex:1; padding:10px; border-radius:8px; border:1px solid rgba(225,29,72,.4);
   background:rgba(225,29,72,.08); color:#e11d48; font-weight:700; font-size:.75rem; cursor:pointer;
-}
-
-/* ---------- FIX: admin orders table — tappable buttons + new columns ---------- */
-.orders-table{min-width:860px;}
-.ot-actions{align-items:center;}
-.ot-actions button{
-  padding:10px 14px;
-  min-height:40px;
-  min-width:64px;
-  border-radius:8px;
-  font-size:.74rem;
-  font-weight:700;
-  position:relative;
-  z-index:2;
-  touch-action:manipulation;
-  -webkit-tap-highlight-color:rgba(41,211,208,.3);
-}
-.ot-actions button:active{opacity:.6; transform:scale(.97);}
-.ot-actions .row-x{width:auto; height:auto; min-width:44px;}
-
-/* checkbox багана + бөөнөөр төлөв солих мөр */
-.orders-table td input[type="checkbox"],
-.bulk-select-all input[type="checkbox"]{
-  width:22px; height:22px; accent-color:var(--pink); cursor:pointer;
-  touch-action:manipulation;
-}
-.bulk-status-row{
-  align-items:center;
-  background:var(--bg-card-2);
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:12px;
-}
-.bulk-select-all{
-  display:flex; align-items:center; gap:8px;
-  font-size:.78rem; color:var(--ink); font-weight:600;
-  white-space:nowrap; cursor:pointer;
-  flex:0 0 auto;
 }
