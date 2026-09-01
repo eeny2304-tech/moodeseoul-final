@@ -24,16 +24,16 @@
   <div class="hero-card"><b>Хүргэлт</b><strong id="airDays">5-7 хоног</strong><span>агаар</span><strong id="groundDays">14-16 хоног</strong><span>газар</span></div>
 </section>
 
-<section class="track">
-  <p class="track-label">📞 Захиалгаа хянах</p>
-  <input id="trackInput" placeholder="Утасны дугаараа оруулна уу">
-  <button class="primary" onclick="trackOrders()">Хайх →</button>
-</section>
-
 <section>
   <div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
   <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
   <div id="products" class="grid"></div>
+</section>
+
+<section class="track">
+  <p class="track-label">📞 Захиалгаа хянах</p>
+  <input id="trackInput" placeholder="Утасны дугаараа оруулна уу">
+  <button class="primary" onclick="trackOrders()">Хайх →</button>
 </section>
 <section id="ordersSection" class="hidden"><div class="section-title"><h2>Таны захиалгууд</h2></div><div id="orders"></div></section>
 
@@ -176,7 +176,6 @@
       Та барааныхаа үнэн дээр нэмээд <b>тээврийн 4,500₩</b> нэмж явуулаарай 🌸</p>
     </div>
 
-    <div class="pay-row"><span class="pay-ic">⋯</span><div><b>Бусад</b><small>Гүйлгээний баримт илгээнэ үү</small></div><span class="arrow">›</span></div>
   </div>
   <div class="pay-info">
     <h3>ТӨЛБӨРИЙН МЭДЭЭЛЭЛ</h3>
