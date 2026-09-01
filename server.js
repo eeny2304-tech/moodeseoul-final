@@ -321,6 +321,22 @@ async function updateOrder(id,p) {
     [p.customer_name??current.customer_name,Number(p.paid??current.paid),p.cargo_type??current.cargo_type,p.cargo_code??current.cargo_code,p.status??current.status,p.address??current.address,p.note??current.note,JSON.stringify(p.items??current.items),Number(p.total??current.total),id])).rows[0];
 }
 
+async function deleteOrder(id) {
+  const current = await getOrderById(id);
+  if (!current) throw Error("Order not found");
+  if (current.status !== "cancelled") {
+    const items = Array.isArray(current.items) ? current.items : (typeof current.items === "string" ? JSON.parse(current.items) : []);
+    await adjustStock(items, +1);
+  }
+  if (!usePostgres) {
+    const d = loadJson();
+    d.orders = d.orders.filter(x => x.id != id);
+    saveJson(d);
+  } else {
+    await pool.query("DELETE FROM orders WHERE id=$1", [id]);
+  }
+}
+
 async function listCustomers() {
   if (!usePostgres) return loadJson().customers.slice().reverse();
   return (await pool.query("SELECT * FROM customers ORDER BY created_at DESC")).rows;
@@ -475,6 +491,7 @@ app.delete("/api/admin/products/:id", auth("admin"), async (req,res)=>{await del
 
 app.get("/api/admin/orders", auth("admin"), async (_,res)=>res.json(await allOrders()));
 app.put("/api/admin/orders/:id", auth("admin"), async (req,res)=>res.json(await updateOrder(req.params.id,req.body)));
+app.delete("/api/admin/orders/:id", auth("admin"), async (req,res)=>{await deleteOrder(req.params.id); res.json({ok:true});});
 app.get("/api/admin/settings", auth("admin"), async (_,res)=>res.json(await getSettings()));
 app.put("/api/admin/settings", auth("admin"), async (req,res)=>res.json(await setSettings(req.body)));
 
@@ -550,33 +567,34 @@ app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"),
   try {
     const wb = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-    const pick = (row, keys) => {
-      for (const k of Object.keys(row)) {
-        if (keys.includes(k.trim().toLowerCase())) return row[k];
-      }
-      return "";
-    };
+    // Read as raw rows (no header assumption) — this sheet has no header row and an
+    // occasional leading date column, so we locate each row's phone number by pattern
+    // and read the surrounding cells positionally: [Name] [Phone] [Product] [Size] [Price] [CargoType]
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
 
     let imported = 0, skipped = 0;
     const results = [];
-    for (const row of rows) {
-      const phone = String(pick(row, ["утас","phone","утасны дугаар"])).trim();
-      const name = String(pick(row, ["нэр","name"])).trim();
-      const cargo_code = String(pick(row, ["карго","cargo","карго код"])).trim();
-      const productName = String(pick(row, ["бараа","product","барааны нэр"])).trim();
-      const price = Number(pick(row, ["үнэ","price","барааны үнэ"])) || 0;
 
-      if (!phone) { skipped++; continue; }
+    for (const r of rows) {
+      const cells = r.map(c => String(c ?? "").trim());
+      const phoneIdx = cells.findIndex(c => /^\d{6,9}$/.test(c));
+      if (phoneIdx === -1) { skipped++; continue; }
+
+      const phone = cells[phoneIdx];
+      const name = cells[phoneIdx - 1] || "";
+      const productName = cells[phoneIdx + 1] || "";
+      const size = cells[phoneIdx + 2] || "";
+      const price = Number(String(cells[phoneIdx + 3] || "").replace(/[^\d.]/g, "")) || 0;
+      const cargoRaw = (cells[phoneIdx + 4] || "").toLowerCase();
+      const cargo_type = cargoRaw.includes("air") || cargoRaw.includes("агаар") ? "air" : "ground";
 
       const order = await createOrder({
         customer_phone: phone,
         customer_name: name,
-        items: [{ name: productName || "Бараа", qty: 1, price }],
+        items: [{ name: productName || "Бараа", qty: 1, price, size: size || undefined }],
         total: price,
-        cargo_type: "air",
-        cargo_code,
+        cargo_type,
+        cargo_code: "",
         address: "",
         note: "Excel-ээс импортлосон (FB захиалга)"
       });
