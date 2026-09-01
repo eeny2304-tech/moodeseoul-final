@@ -355,6 +355,17 @@ const upload = multer({ storage: multer.diskStorage({
 const importUpload = multer({ storage: multer.memoryStorage() });
 
 app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgres":"local-json", xlsx: !!XLSX}));
+app.get("/api/debug-admin-env", (_,res)=>{
+  const u = String(process.env.ADMIN_USER || "");
+  const p = String(process.env.ADMIN_PASSWORD || "");
+  res.json({
+    envUserSet: !!u,
+    envUserLen: u.length,
+    envUserFirst2: u.slice(0,2),
+    envPassSet: !!p,
+    envPassLen: p.length
+  });
+});
 app.get("/api/settings", async (_,res)=>res.json(await getSettings()));
 app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
 
