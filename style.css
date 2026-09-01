@@ -518,3 +518,63 @@ button.primary:active{opacity:.85;}
 #adminContent .admin-row button.primary{
   background:var(--grad); color:#0b0b0e; border:0;
 }
+
+/* ---------- product card additions: media, KRW price, detail btn ---------- */
+.product-media{position:relative; cursor:pointer;}
+.product-media .img-count{
+  position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.55); color:#fff;
+  font-size:.6rem; padding:2px 7px; border-radius:999px;
+}
+.product .p h3{cursor:pointer;}
+.price-krw{font-size:.68rem; color:var(--muted); margin:-2px 0 4px;}
+.detail-btn{
+  width:100%; margin-top:6px; padding:8px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg-card-2); color:var(--ink);
+  font-size:.7rem; font-weight:700;
+}
+
+/* ---------- product detail modal ---------- */
+.product-modal-box{width:min(480px,100%);}
+.pm-gallery{position:relative; border-radius:14px; overflow:hidden; background:var(--bg-card-2); margin-bottom:10px;}
+.pm-gallery img{width:100%; aspect-ratio:1/1; object-fit:cover; display:block;}
+.pm-nav{
+  position:absolute; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%;
+  background:rgba(0,0,0,.45); color:#fff; border:0; font-size:1.2rem; cursor:pointer;
+}
+.pm-prev{left:8px;} .pm-next{right:8px;}
+.pm-thumbs{display:flex; gap:8px; margin-bottom:14px; overflow-x:auto;}
+.pm-thumb{width:52px; height:52px; border-radius:8px; object-fit:cover; cursor:pointer; opacity:.55; border:2px solid transparent; flex:0 0 auto;}
+.pm-thumb.active{opacity:1; border-color:var(--teal);}
+.pm-price{display:flex; align-items:baseline; gap:10px; margin:6px 0 12px;}
+.pm-price b{font-size:1.15rem; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.pm-krw{font-size:.8rem; color:var(--muted);}
+.pm-stock{font-size:.8rem; color:var(--muted);}
+.pm-sizes{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;}
+.pm-size{font-size:.72rem; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--bg-card-2); color:var(--ink);}
+.pm-size.is-out{color:var(--muted); text-decoration:line-through;}
+.pm-desc{font-size:.82rem; color:var(--muted); line-height:1.6;}
+.pm-cargo{
+  background:var(--bg-card-2); border:1px solid var(--line); border-radius:12px; padding:14px; margin:12px 0;
+}
+.pm-cargo b{font-size:.82rem; color:var(--ink); display:block; margin-bottom:6px;}
+.pm-cargo p{font-size:.76rem; color:var(--muted); line-height:1.55; margin:0;}
+.pm-pickup{margin-top:8px !important;}
+
+/* ---------- admin multi-image upload ---------- */
+.file-btn.uploading{opacity:.6; pointer-events:none;}
+.img-preview.multi{display:flex; flex-wrap:wrap; gap:8px;}
+.thumb-wrap{position:relative; width:70px; height:70px;}
+.thumb-wrap img{width:100%; height:100%; object-fit:cover; border-radius:10px; border:1px solid var(--line);}
+.thumb-x{
+  position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%;
+  background:#e11d48; color:#fff; border:2px solid var(--bg-card); font-size:.7rem; line-height:1; cursor:pointer;
+}
+.thumb-main{
+  position:absolute; bottom:2px; left:2px; right:2px; font-size:.5rem; text-align:center;
+  background:rgba(0,0,0,.6); color:#fff; border-radius:4px; padding:1px;
+}
+
+/* ---------- Korean bank + KRW payment note ---------- */
+.krw-note{font-size:.72rem; color:var(--muted); line-height:1.7; margin:10px 0 0;}
+.krw-note b{color:var(--pink);}
+.krw-pay{margin-top:14px;}
