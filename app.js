@@ -508,7 +508,6 @@ function openAdminOrderDetail(id){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const created=o.created_at?new Date(o.created_at).toLocaleString("mn-MN"):"—";
   const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
-  const allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
 
   $("orderDetailContent").innerHTML=`
     <p class="success-code">Захиалгын код<br><b>${esc(o.order_code)}</b></p>
@@ -530,24 +529,39 @@ function openAdminOrderDetail(id){
       <input id="mpaid" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
     </div>
     <div class="admin-row">
-      <input id="mcargo" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
-      <select id="maddr">
-        <option value="">— Карго салбар сонгох —</option>
-        ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
+      <select id="mtype" onchange="updateAdminCargoBranches()">
+        <option value="air" ${o.cargo_type==="air"?"selected":""}>✈️ Агаар (10,500₩/кг)</option>
+        <option value="ground" ${o.cargo_type==="ground"?"selected":""}>🚚 Газар (2,700₩/кг)</option>
       </select>
+      <input id="mcargo" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
+    </div>
+    <div class="admin-row">
+      <select id="maddr"></select>
     </div>
     <div class="admin-row">
       <button class="primary" onclick="saveOrderFromModal(${o.id})">Шинэчлэх</button>
       <button class="row-x-full" onclick="deleteOrderAdmin(${o.id})">Устгах</button>
     </div>
   `;
+  updateAdminCargoBranches(o.address);
   $("orderDetailModal").classList.remove("hidden");
+}
+
+function updateAdminCargoBranches(preselectAddress){
+  const type=$("mtype").value;
+  const list=CARGO_BRANCHES[type]||[];
+  $("maddr").innerHTML=list.map(b=>{
+    const val=`${b.name} — ${b.detail}`;
+    const sel=preselectAddress && preselectAddress.startsWith(b.name) ? "selected":"";
+    return `<option value="${esc(val)}" ${sel}>${esc(b.name)}</option>`;
+  }).join("");
 }
 
 async function saveOrderFromModal(id){
   try{
     await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({
-      status:$("mst").value, paid:$("mpaid").value, cargo_code:$("mcargo").value, address:$("maddr").value
+      status:$("mst").value, paid:$("mpaid").value, cargo_code:$("mcargo").value,
+      address:$("maddr").value, cargo_type:$("mtype").value
     })});
     closeOrderDetail();
     adminTab("orders");
@@ -614,7 +628,6 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
-  window.__allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
   $("ordersAdminList").innerHTML = os.length ? `
     <div class="orders-table-wrap">
       <table class="orders-table">
