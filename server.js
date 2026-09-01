@@ -365,6 +365,17 @@ app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
   const adminUser = String(process.env.ADMIN_USER || "").trim();
   const adminPassword = String(process.env.ADMIN_PASSWORD || "");
 
+  console.log("[admin-login-debug]", {
+    envUserSet: !!adminUser,
+    envPassSet: !!adminPassword,
+    envUserLen: adminUser.length,
+    envPassLen: adminPassword.length,
+    inputLoginLen: login.length,
+    inputPassLen: password.length,
+    loginMatches: login === adminUser,
+    passMatches: password === adminPassword
+  });
+
   if (
     adminUser &&
     adminPassword &&
