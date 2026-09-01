@@ -203,13 +203,29 @@
   <div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div>
   <div id="cartItems"></div>
 
-  <div class="cargo-note">
-    <b>🚚 Каргоны төлбөр тусдаа</b>
-    <p>Барааны үнэ болон каргоны төлбөр тусдаа. Бараа Монголд ирсний дараа карго тантай холбогдож, та каргоны төлбөрөө төлөөд бараагаа авна.</p>
+  <div id="receiveChoice" class="hidden">
+    <p class="field-label">Барааг хаанаас авах вэ?</p>
+    <select id="receiveWhere" onchange="updateCheckoutMode()">
+      <option value="mn">🇲🇳 Монголд авах</option>
+      <option value="kr">🇰🇷 Солонгост авах</option>
+    </select>
+  </div>
+
+  <div id="cargoBlock">
+    <div class="cargo-note">
+      <b>🚚 Каргоны төлбөр тусдаа</b>
+      <p>Барааны үнэ болон каргоны төлбөр тусдаа. Бараа Монголд ирсний дараа карго тантай холбогдож, та каргоны төлбөрөө төлөөд бараагаа авна.</p>
+    </div>
+  </div>
+
+  <div id="deliveryNote" class="cargo-note hidden">
+    <b>🚚 Хүргэлт тусдаа</b>
+    <p>Хүргэлтийн төлбөр 7,000₮ бөгөөд барааны үнээс тусдаа. Хүлээн авах хаягаа оруулна уу.</p>
   </div>
 
   <input id="customerName" placeholder="Нэр">
   <input id="customerPhone" placeholder="Утасны дугаар">
+  <input id="customerAddress" class="hidden" placeholder="Хүлээн авах хаяг">
   <select id="cargoType" onchange="updateCargoBranches()">
     <option value="air">✈️ Агаарын карго — 5-7 хоног (1кг 10,500₩)</option>
     <option value="ground">🚚 Газрын карго — 14-16 хоног (1кг 2,700₩)</option>
@@ -276,6 +292,14 @@
     <div class="faq-item"><b>17. Бэлэн бараа байдаг уу, эсвэл бүгд захиалгаар ирдэг үү?</b><p>Бараанаас хамаарч бэлэн болон захиалгат бүтээгдэхүүн байна. Барааны мэдээлэл дээр тус бүрт нь тэмдэглэнэ.</p></div>
     <div class="faq-item"><b>18. Асуух зүйл байвал хаана холбогдох вэ?</b><p>Захиалга, размер, үнэ болон бараатай холбоотой бүх асуултаа бидэнд мессежээр илгээж болно. 💌</p></div>
   </div>
+</div>
+
+<div id="lightbox" class="lightbox hidden" onclick="closeLightbox(event)">
+  <button class="lb-close" onclick="closeLightbox(event, true)">×</button>
+  <button class="lb-nav lb-prev" onclick="lbMove(event,-1)">‹</button>
+  <div class="lb-stage"><img id="lbImage" src="" alt=""></div>
+  <button class="lb-nav lb-next" onclick="lbMove(event,1)">›</button>
+  <div id="lbCounter" class="lb-counter"></div>
 </div>
 
 <div id="productModal" class="modal hidden">
