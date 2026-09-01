@@ -416,12 +416,13 @@ async function adminTab(tab){
 
     if(tab==="customers"){
       const cs=await api("/api/admin/customers");
-      window.__allCustomers=cs;
+      const sorted=[...cs].sort((a,b)=>(a.phone||"").localeCompare(b.phone||""));
+      window.__allCustomers=sorted;
       $("adminContent").innerHTML=`<h2>Хэрэглэгчид</h2>
         <div class="admin-row">
           <input id="custSearch" placeholder="Утас, нэрээр хайх" oninput="filterCustomers()">
         </div>
-        <div id="customersList">${cs.length?cs.map(c=>`<div class="admin-card"><b>${esc(c.name||"Нэргүй")}</b><br>${esc(c.phone)}</div>`).join(""):`<p class="muted-note">Хэрэглэгч алга байна.</p>`}</div>`;
+        <div id="customersList">${renderCustomersTable(sorted)}</div>`;
     }
 
     if(tab==="settings"){
@@ -507,6 +508,7 @@ function openAdminOrderDetail(id){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const created=o.created_at?new Date(o.created_at).toLocaleString("mn-MN"):"—";
   const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
+  const allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
 
   $("orderDetailContent").innerHTML=`
     <p class="success-code">Захиалгын код<br><b>${esc(o.order_code)}</b></p>
@@ -514,19 +516,42 @@ function openAdminOrderDetail(id){
       <div><span>Огноо</span><b>${esc(created)}</b></div>
       <div><span>Нэр</span><b>${esc(o.customer_name||"—")}</b></div>
       <div><span>Утас</span><b>${esc(o.customer_phone)}</b></div>
-      <div><span>Хаяг</span><b>${esc(o.address||"—")}</b></div>
       <div><span>Нийт үнэ</span><b>${money(o.total)}</b></div>
-      <div><span>Төлсөн</span><b>${money(o.paid)}</b></div>
       <div><span>Үлдэгдэл</span><b class="${balance>0?'bal-due':''}">${money(balance)}</b></div>
       <div><span>Хүргэлт</span><b>${o.cargo_type==="air"?"Агаар 5-7 хоног":"Газар 14-16 хоног"}</b></div>
-      ${o.cargo_code?`<div><span>Карго код</span><b>${esc(o.cargo_code)}</b></div>`:""}
-      <div><span>Төлөв</span><b>${STAGE_NAMES[o.status]||o.status}</b></div>
       ${o.note?`<div><span>Тэмдэглэл</span><b>${esc(o.note)}</b></div>`:""}
     </div>
     <h3 class="section-sub">Бараанууд</h3>
     ${items.map(it=>`<div class="admin-card"><b>${esc(it.name)}</b>${it.size?` · Хэмжээ: ${esc(it.size)}`:""} · ${it.qty} ширхэг · ${money(it.price)}</div>`).join("")}
+
+    <h3 class="section-sub">Засах</h3>
+    <div class="admin-row">
+      <select id="mst">${["registered","transport","mongolia","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
+      <input id="mpaid" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
+    </div>
+    <div class="admin-row">
+      <input id="mcargo" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
+      <select id="maddr">
+        <option value="">— Карго салбар сонгох —</option>
+        ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
+      </select>
+    </div>
+    <div class="admin-row">
+      <button class="primary" onclick="saveOrderFromModal(${o.id})">Шинэчлэх</button>
+      <button class="row-x-full" onclick="deleteOrderAdmin(${o.id})">Устгах</button>
+    </div>
   `;
   $("orderDetailModal").classList.remove("hidden");
+}
+
+async function saveOrderFromModal(id){
+  try{
+    await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({
+      status:$("mst").value, paid:$("mpaid").value, cargo_code:$("mcargo").value, address:$("maddr").value
+    })});
+    closeOrderDetail();
+    adminTab("orders");
+  }catch(e){ alert(e.message); }
 }
 
 let bulkRows = [];
@@ -589,31 +614,40 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
-  const allBranches=[...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
-  $("ordersAdminList").innerHTML = os.length ? os.map(o=>{
-    const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
-    return `<div class="admin-card">
-      <div class="order-admin-head">
-        <b>${esc(o.order_code)}</b>
-        <span class="badge status-${o.status}">${STAGE_NAMES[o.status]||o.status}</span>
-      </div>
-      <p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p>
-      <p>${money(o.total)} · төлсөн ${money(o.paid)} ${balance>0?`· <b class="bal-due">үлдэгдэл ${money(balance)}</b>`:`· <b class="bal-ok">төлөгдсөн</b>`}</p>
-      <div class="admin-row">
-        <select id="st${o.id}">${["registered","transport","mongolia","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
-        <input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
-        <input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
-        <select id="addr${o.id}">
-          <option value="">— Карго салбар сонгох —</option>
-          ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
-        </select>
-      </div>
-      <div class="admin-row">
-        <button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button>
-        <button onclick="openAdminOrderDetail(${o.id})">Дэлгэрэнгүй</button>
-      </div>
-    </div>`;
-  }).join("") : `<p class="muted-note">Захиалга алга байна.</p>`;
+  window.__allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
+  $("ordersAdminList").innerHTML = os.length ? `
+    <div class="orders-table-wrap">
+      <table class="orders-table">
+        <thead><tr>
+          <th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Дүн</th><th>Төлөв</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${os.map((o,i)=>{
+            const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
+            return `<tr>
+              <td>${i+1}</td>
+              <td class="ot-code">${esc(o.order_code)}</td>
+              <td>${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
+              <td>${money(o.total)}${balance>0?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small>`:`<br><small class="bal-ok">төлөгдсөн</small>`}</td>
+              <td><span class="badge status-${o.status}">${STAGE_NAMES[o.status]||o.status}</span></td>
+              <td class="ot-actions">
+                <button onclick="openAdminOrderDetail(${o.id})">Засах</button>
+                <button class="row-x" onclick="deleteOrderAdmin(${o.id})">✕</button>
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  ` : `<p class="muted-note">Захиалга алга байна.</p>`;
+}
+
+async function deleteOrderAdmin(id){
+  if(!confirm("Энэ захиалгыг устгах уу? Буцаах боломжгүй.")) return;
+  try{
+    await api("/api/admin/orders/"+id,{method:"DELETE"});
+    adminTab("orders");
+  }catch(e){ alert(e.message); }
 }
 
 function filterOrdersAdmin(){
@@ -626,12 +660,24 @@ function filterOrdersAdmin(){
   renderOrdersAdminList(filtered);
 }
 
+function renderCustomersTable(list){
+  if(!list.length) return `<p class="muted-note">Хэрэглэгч алга байна.</p>`;
+  return `<div class="orders-table-wrap">
+    <table class="orders-table">
+      <thead><tr><th>#</th><th>Утасны дугаар</th><th>Нэр</th></tr></thead>
+      <tbody>
+        ${list.map((c,i)=>`<tr><td>${i+1}</td><td class="ot-code">${esc(c.phone)}</td><td>${esc(c.name||"—")}</td></tr>`).join("")}
+      </tbody>
+    </table>
+  </div>`;
+}
+
 function filterCustomers(){
   const q=$("custSearch").value.trim().toLowerCase();
   const filtered=(window.__allCustomers||[]).filter(c=>
     (c.phone||"").toLowerCase().includes(q) || (c.name||"").toLowerCase().includes(q)
   );
-  $("customersList").innerHTML = filtered.length ? filtered.map(c=>`<div class="admin-card"><b>${esc(c.name||"Нэргүй")}</b><br>${esc(c.phone)}</div>`).join("") : `<p class="muted-note">Олдсонгүй.</p>`;
+  $("customersList").innerHTML = renderCustomersTable(filtered);
 }
 
 async function importOrders(input){
