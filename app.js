@@ -7,6 +7,7 @@ const STAGE_NAMES = { registered:"Бүртгэл", transport:"Тээвэр", mon
 
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
+function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
 async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
@@ -20,15 +21,22 @@ function productCardHtml(p){
   const sizeOptions = hasSizes ? sizes.map(sz=>`<option value="${esc(sz.size)}" ${Number(sz.qty)<=0?"disabled":""}>${esc(sz.size)} ${Number(sz.qty)<=0?"(дууссан)":"("+sz.qty+")"}</option>`).join("") : "";
   const catLabel = CATEGORY_LABELS[p.category] || "";
 
+  const imgs = (Array.isArray(p.images) && p.images.length) ? p.images : (p.image ? [p.image] : []);
+  const cover = imgs[0] || 'https://placehold.co/600x600?text=MOODE+SEOUL';
   return `<article class="product">
-    <img src="${p.image||'https://placehold.co/600x600?text=MOODE+SEOUL'}">
+    <div class="product-media" onclick="openProductModal(${p.id})">
+      <img src="${cover}">
+      ${imgs.length>1?`<span class="img-count">📷 ${imgs.length}</span>`:""}
+    </div>
     <div class="p">
       ${catLabel?`<span class="cat-badge cat-${esc(p.category)}">${catLabel}</span>`:""}
-      <h3>${esc(p.name)}</h3>
+      <h3 onclick="openProductModal(${p.id})">${esc(p.name)}</h3>
       <div class="price">${money(p.price)}</div>
+      ${Number(p.price_krw)>0?`<div class="price-krw">${won(p.price_krw)}</div>`:""}
       ${hasSizes?`<select class="size-select" id="size-${p.id}">${sizeOptions}</select>`:""}
       <div class="stock">${totalStock>0?"Бэлэн: "+totalStock:"Дууссан"}</div>
       <button ${totalStock<=0?"disabled":""} onclick="addCart(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
+      <button class="detail-btn" onclick="openProductModal(${p.id})">Дэлгэрэнгүй</button>
     </div>
   </article>`;
 }
@@ -58,6 +66,64 @@ function openCart(){$("cart").classList.remove("hidden");renderCart()} function 
 function togglePayDetail(){
   $("bankDetail").classList.toggle("hidden");
   $("bankRow").classList.toggle("open");
+}
+function toggleKrwDetail(){
+  $("krwDetail").classList.toggle("hidden");
+  $("krwRow").classList.toggle("open");
+}
+
+/* ---------------- Product detail modal ---------------- */
+let pmImages=[], pmIndex=0;
+
+function openProductModal(id){
+  const p=products.find(x=>x.id==id); if(!p) return;
+  const sizes=Array.isArray(p.sizes)?p.sizes:[];
+  const totalStock = sizes.length ? sizes.reduce((a,s)=>a+(Number(s.qty)||0),0) : Number(p.stock||0);
+  pmImages = (Array.isArray(p.images)&&p.images.length) ? p.images : (p.image?[p.image]:['https://placehold.co/800x800?text=MOODE+SEOUL']);
+  pmIndex = 0;
+
+  $("pmName").textContent = p.name;
+  renderPmGallery();
+
+  const catLabel = CATEGORY_LABELS[p.category] || "";
+  $("pmBody").innerHTML=`
+    ${catLabel?`<span class="cat-badge cat-${esc(p.category)}">${catLabel}</span>`:""}
+    <div class="pm-price">
+      <b>${money(p.price)}</b>
+      ${Number(p.price_krw)>0?`<span class="pm-krw">${won(p.price_krw)}</span>`:""}
+    </div>
+    ${sizes.length?`
+      <h3 class="section-sub">Хэмжээ ба үлдэгдэл</h3>
+      <div class="pm-sizes">${sizes.map(sz=>`<span class="pm-size ${Number(sz.qty)<=0?'is-out':''}">${esc(sz.size)} · ${Number(sz.qty)>0?sz.qty+' ширхэг':'дууссан'}</span>`).join("")}</div>
+    `:`<p class="pm-stock">${totalStock>0?"Бэлэн: "+totalStock+" ширхэг":"Дууссан"}</p>`}
+    ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
+    <div class="pm-cargo">
+      <b>🚚 Каргоны төлбөр тусдаа</b>
+      <p>Барааны үнэ болон каргоны төлбөр тусдаа. Бараа Монголд ирсний дараа карго тантай холбогдож, та каргоны төлбөрөө төлөөд бараагаа авна.</p>
+      ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
+    </div>
+    <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
+  `;
+  $("productModal").classList.remove("hidden");
+}
+
+function renderPmGallery(){
+  $("pmGallery").innerHTML=`
+    ${pmImages.length>1?`<button class="pm-nav pm-prev" onclick="pmMove(-1)">‹</button>`:""}
+    <img src="${pmImages[pmIndex]}" alt="">
+    ${pmImages.length>1?`<button class="pm-nav pm-next" onclick="pmMove(1)">›</button>`:""}
+  `;
+  $("pmThumbs").innerHTML = pmImages.length>1
+    ? pmImages.map((u,i)=>`<img class="pm-thumb ${i===pmIndex?'active':''}" src="${u}" onclick="pmGo(${i})">`).join("")
+    : "";
+}
+function pmMove(step){ pmIndex=(pmIndex+step+pmImages.length)%pmImages.length; renderPmGallery(); }
+function pmGo(i){ pmIndex=i; renderPmGallery(); }
+function closeProductModal(){ $("productModal").classList.add("hidden"); }
+
+function addCartFromModal(id){
+  closeProductModal();
+  addCart(id);
 }
 
 /* ---------------- Footer menu links ---------------- */
@@ -192,18 +258,56 @@ async function adminTab(tab){
   try{
     if(tab==="dashboard"){
       const s=await api("/api/admin/stats");
-      const monthlyHtml=(s.monthly||[]).length
-        ? s.monthly.map(m=>{const [y,mo]=m.month.split("-");return `<div class="month-row"><span>${mo}/${y}</span><b>${money(m.total)}</b></div>`}).join("")
+      const os=await api("/api/admin/orders");
+
+      const now=new Date();
+      const thisKey=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+      const monthKey=d=>{const x=new Date(d); return isNaN(x)?"":x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0");};
+
+      const thisMonthOrders=os.filter(o=>monthKey(o.created_at)===thisKey);
+      const thisMonthRevenue=thisMonthOrders.reduce((a,o)=>a+Number(o.paid||0),0);
+      const unpaid=os.filter(o=>o.status!=="cancelled").reduce((a,o)=>a+Math.max(0,Number(o.total||0)-Number(o.paid||0)),0);
+      const cancelled=os.filter(o=>o.status==="cancelled").length;
+
+      const counts={registered:0,transport:0,mongolia:0,delivery:0,delivered:0,cancelled:0};
+      os.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
+
+      const monthly=s.monthly||[];
+      const maxVal=Math.max(1,...monthly.map(m=>Number(m.total)||0));
+      const chartHtml=monthly.length
+        ? `<div class="bar-chart">${monthly.map(m=>{
+            const [y,mo]=m.month.split("-");
+            const h=Math.round((Number(m.total)||0)/maxVal*100);
+            return `<div class="bar-col" title="${money(m.total)}">
+              <span class="bar-val">${Math.round((Number(m.total)||0)/1000)}k</span>
+              <div class="bar" style="height:${Math.max(4,h)}%"></div>
+              <span class="bar-label">${mo}/${String(y).slice(2)}</span>
+            </div>`;
+          }).join("")}</div>`
         : `<p class="muted-note">Мэдээлэл алга байна.</p>`;
+
       $("adminContent").innerHTML=`<h2>Хяналтын самбар</h2>
         <div class="grid">
-          <div class="admin-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div>
-          <div class="admin-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div>
-          <div class="admin-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div>
-          <div class="admin-card"><b>Төлөгдсөн</b><h2>${money(s.revenue)}</h2></div>
+          <div class="admin-card stat-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div>
+          <div class="admin-card stat-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div>
+          <div class="admin-card stat-card"><b>Хүргэгдсэн</b><h2>${s.delivered}</h2></div>
+          <div class="admin-card stat-card"><b>Цуцлагдсан</b><h2>${cancelled}</h2></div>
         </div>
+
+        <div class="grid">
+          <div class="admin-card stat-card"><b>Нийт орлого</b><h2>${money(s.revenue)}</h2></div>
+          <div class="admin-card stat-card"><b>Энэ сар</b><h2>${money(thisMonthRevenue)}</h2><small>${thisMonthOrders.length} захиалга</small></div>
+          <div class="admin-card stat-card stat-warn"><b>Төлөгдөөгүй</b><h2>${money(unpaid)}</h2></div>
+          <div class="admin-card stat-card"><b>Бараа</b><h2>${s.products}</h2></div>
+        </div>
+
         <h3 class="section-sub">Сарын борлуулалт</h3>
-        <div class="admin-card month-list">${monthlyHtml}</div>`;
+        <div class="admin-card">${chartHtml}</div>
+
+        <h3 class="section-sub">Захиалгын төлөв</h3>
+        <div class="admin-card status-list">
+          ${Object.entries(counts).map(([k,v])=>`<div class="status-row"><span class="badge status-${k}">${STAGE_NAMES[k]||k}</span><b>${v}</b></div>`).join("")}
+        </div>`;
     }
 
     if(tab==="products"){
@@ -212,13 +316,15 @@ async function adminTab(tab){
         <div class="admin-card">
           <div class="admin-row">
             <input id="pn" placeholder="Барааны нэр">
-            <input id="pp" type="number" placeholder="Үнэ">
+            <input id="pp" type="number" placeholder="Үнэ ₮">
+            <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
               <option value="kr_belen">Солонгост бэлэн</option>
               <option value="order">Захиалгийн бараа</option>
             </select>
           </div>
+          <input id="ppickup" placeholder="📍 Авах цэг (жиш: Улаанбаатар, Драгон карго)">
 
           <p class="field-label">Хэмжээ бүрийн тоо ширхэг</p>
           <div id="sizeRows"></div>
@@ -227,21 +333,31 @@ async function adminTab(tab){
           <p class="field-label">Хэмжээгүй бол ерөнхий тоо ширхэг</p>
           <input id="pst" type="number" placeholder="Тоо (хэмжээ ашиглаагүй үед)">
 
-          <label class="file-btn">📷 Зураг сонгох (утаснаас)<input type="file" id="pi_file" accept="image/*" onchange="uploadProductImage(this)"></label>
+          <label class="file-btn">📷 Зураг сонгох — 6 хүртэл (утаснаас)<input type="file" id="pi_file" accept="image/*" multiple onchange="uploadProductImages(this)"></label>
           <input type="hidden" id="pi">
-          <div id="pi_preview" class="img-preview"></div>
+          <div id="pi_preview" class="img-preview multi"></div>
           <textarea id="pd" placeholder="Тайлбар"></textarea>
           <button class="primary" onclick="addProduct()">Бараа нэмэх</button>
         </div>
-        ${ps.map(p=>`<div class="admin-card admin-card-row">
-            ${p.image?`<img class="admin-thumb" src="${p.image}">`:`<div class="admin-thumb admin-thumb-empty">MS</div>`}
-            <div>
-              <b>${esc(p.name)}</b> — ${money(p.price)} — үлдэгдэл ${p.stock}<br>
-              <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}</small>
-              ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
-              <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
-            </div>
-          </div>`).join("")}`;
+
+        <h3 class="section-sub">Барааны жагсаалт</h3>
+        <div class="admin-row">
+          <input id="prodSearch" placeholder="🔍 Нэрээр хайх" oninput="filterAdminProducts()">
+          <select id="prodCatFilter" onchange="filterAdminProducts()">
+            <option value="">Бүх ангилал</option>
+            <option value="mn_belen">Монголд бэлэн</option>
+            <option value="kr_belen">Солонгост бэлэн</option>
+            <option value="order">Захиалгийн бараа</option>
+          </select>
+          <select id="prodStockFilter" onchange="filterAdminProducts()">
+            <option value="">Бүх үлдэгдэл</option>
+            <option value="in">Бэлэн байгаа</option>
+            <option value="out">Дууссан</option>
+          </select>
+        </div>
+        <div id="adminProductsList"></div>`;
+      window.__allProducts=ps;
+      renderAdminProductsList(ps);
     }
 
     if(tab==="orders"){
@@ -287,30 +403,113 @@ function collectSizeRows(){
     .filter(s=>s.size);
 }
 
-async function uploadProductImage(input){
-  const file=input.files[0]; if(!file) return;
-  const fd=new FormData(); fd.append("image",file);
+let pendingImages=[];
+
+async function uploadProductImages(input){
+  const files=[...input.files].slice(0,6);
+  if(!files.length) return;
+  const fd=new FormData();
+  files.forEach(f=>fd.append("images",f));
+  const btn=input.closest(".file-btn");
+  if(btn) btn.classList.add("uploading");
   try{
-    const r=await fetch("/api/admin/upload",{method:"POST",headers:{Authorization:"Bearer "+adminToken},body:fd});
+    const r=await fetch("/api/admin/upload-many",{method:"POST",headers:{Authorization:"Bearer "+adminToken},body:fd});
     const d=await r.json();
     if(!r.ok) throw Error(d.error||"Зураг оруулахад алдаа гарлаа");
-    $("pi").value=d.url;
-    $("pi_preview").innerHTML=`<img src="${d.url}">`;
+    pendingImages=[...pendingImages,...d.urls].slice(0,6);
+    renderPendingImages();
   }catch(e){alert(e.message)}
+  finally{ if(btn) btn.classList.remove("uploading"); }
+}
+
+function renderPendingImages(){
+  $("pi").value = pendingImages[0] || "";
+  $("pi_preview").innerHTML = pendingImages.map((u,i)=>
+    `<div class="thumb-wrap"><img src="${u}"><button type="button" class="thumb-x" onclick="removePendingImage(${i})">×</button>${i===0?'<span class="thumb-main">үндсэн</span>':''}</div>`
+  ).join("");
+}
+function removePendingImage(i){ pendingImages.splice(i,1); renderPendingImages(); }
+
+function renderAdminProductsList(ps){
+  const el=$("adminProductsList");
+  if(!el) return;
+  el.innerHTML = ps.length ? ps.map(p=>{
+    const out = Number(p.stock||0) <= 0;
+    return `<div class="admin-card admin-card-row ${out?'is-out':''}">
+      ${p.image?`<img class="admin-thumb" src="${p.image}">`:`<div class="admin-thumb admin-thumb-empty">MS</div>`}
+      <div>
+        <b>${esc(p.name)}</b> — ${money(p.price)}
+        <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
+        <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}</small>
+        ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
+        <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+      </div>
+    </div>`;
+  }).join("") : `<p class="muted-note">Бараа олдсонгүй.</p>`;
+}
+
+function filterAdminProducts(){
+  const q=($("prodSearch")?.value||"").trim().toLowerCase();
+  const cat=$("prodCatFilter")?.value||"";
+  const stock=$("prodStockFilter")?.value||"";
+  let list=(window.__allProducts||[]);
+  if(q) list=list.filter(p=>(p.name||"").toLowerCase().includes(q));
+  if(cat) list=list.filter(p=>p.category===cat);
+  if(stock==="in") list=list.filter(p=>Number(p.stock||0)>0);
+  if(stock==="out") list=list.filter(p=>Number(p.stock||0)<=0);
+  renderAdminProductsList(list);
+}
+
+function openAdminOrderDetail(id){
+  const o=(window.__allOrders||[]).find(x=>x.id==id);
+  if(!o) return;
+  const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
+  const created=o.created_at?new Date(o.created_at).toLocaleString("mn-MN"):"—";
+  const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
+
+  $("orderDetailContent").innerHTML=`
+    <p class="success-code">Захиалгын код<br><b>${esc(o.order_code)}</b></p>
+    <div class="success-bank">
+      <div><span>Огноо</span><b>${esc(created)}</b></div>
+      <div><span>Нэр</span><b>${esc(o.customer_name||"—")}</b></div>
+      <div><span>Утас</span><b>${esc(o.customer_phone)}</b></div>
+      <div><span>Хаяг</span><b>${esc(o.address||"—")}</b></div>
+      <div><span>Нийт үнэ</span><b>${money(o.total)}</b></div>
+      <div><span>Төлсөн</span><b>${money(o.paid)}</b></div>
+      <div><span>Үлдэгдэл</span><b class="${balance>0?'bal-due':''}">${money(balance)}</b></div>
+      <div><span>Хүргэлт</span><b>${o.cargo_type==="air"?"Агаар 5-7 хоног":"Газар 14-16 хоног"}</b></div>
+      ${o.cargo_code?`<div><span>Карго код</span><b>${esc(o.cargo_code)}</b></div>`:""}
+      <div><span>Төлөв</span><b>${STAGE_NAMES[o.status]||o.status}</b></div>
+      ${o.note?`<div><span>Тэмдэглэл</span><b>${esc(o.note)}</b></div>`:""}
+    </div>
+    <h3 class="section-sub">Бараанууд</h3>
+    ${items.map(it=>`<div class="admin-card"><b>${esc(it.name)}</b>${it.size?` · Хэмжээ: ${esc(it.size)}`:""} · ${it.qty} ширхэг · ${money(it.price)}</div>`).join("")}
+  `;
+  $("orderDetailModal").classList.remove("hidden");
 }
 
 function renderOrdersAdminList(os){
-  $("ordersAdminList").innerHTML = os.length ? os.map(o=>`<div class="admin-card">
-      <b>${esc(o.order_code)}</b>
-      <p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)} · ${money(o.total)} · төлсөн ${money(o.paid)}</p>
+  $("ordersAdminList").innerHTML = os.length ? os.map(o=>{
+    const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
+    return `<div class="admin-card">
+      <div class="order-admin-head">
+        <b>${esc(o.order_code)}</b>
+        <span class="badge status-${o.status}">${STAGE_NAMES[o.status]||o.status}</span>
+      </div>
+      <p>${esc(o.customer_name||"")} · ${esc(o.customer_phone)}</p>
+      <p>${money(o.total)} · төлсөн ${money(o.paid)} ${balance>0?`· <b class="bal-due">үлдэгдэл ${money(balance)}</b>`:`· <b class="bal-ok">төлөгдсөн</b>`}</p>
       <div class="admin-row">
-        <select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${s}</option>`).join("")}</select>
+        <select id="st${o.id}">${["registered","transport","mongolia","delivery","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
         <input id="paid${o.id}" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
         <input id="cargo${o.id}" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
         <input id="addr${o.id}" value="${esc(o.address||"")}" placeholder="Хүргэлтийн хаяг">
       </div>
-      <button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button>
-    </div>`).join("") : `<p class="muted-note">Захиалга алга байна.</p>`;
+      <div class="admin-row">
+        <button class="primary" onclick="saveOrder(${o.id})">Шинэчлэх</button>
+        <button onclick="openAdminOrderDetail(${o.id})">Дэлгэрэнгүй</button>
+      </div>
+    </div>`;
+  }).join("") : `<p class="muted-note">Захиалга алга байна.</p>`;
 }
 
 function filterOrdersAdmin(){
@@ -346,7 +545,19 @@ async function importOrders(input){
 async function addProduct(){
   const sizes = collectSizeRows();
   const stock = sizes.length ? sizes.reduce((s,x)=>s+x.qty,0) : Number($("pst").value)||0;
-  await api("/api/admin/products",{method:"POST",body:JSON.stringify({name:$("pn").value,price:$("pp").value,stock,category:$("pc").value,image:$("pi").value,description:$("pd").value,sizes})});
+  await api("/api/admin/products",{method:"POST",body:JSON.stringify({
+    name:$("pn").value,
+    price:$("pp").value,
+    price_krw:$("pkrw").value,
+    stock,
+    category:$("pc").value,
+    image:pendingImages[0]||"",
+    images:pendingImages,
+    pickup:$("ppickup").value,
+    description:$("pd").value,
+    sizes
+  })});
+  pendingImages=[];
   adminTab("products");
   loadProducts();
 }
