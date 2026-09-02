@@ -735,3 +735,34 @@ button.primary:active{opacity:.85;}
   color:rgba(255,255,255,.85); font-size:.8rem; letter-spacing:.05em;
 }
 .pm-gallery img{cursor:zoom-in;}
+
+/* ---------- brand filter tabs ---------- */
+.brand-tabs{
+  display:flex; gap:8px; overflow-x:auto; padding:0 6px 12px;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; position:relative;
+}
+.brand-tabs::-webkit-scrollbar{display:none;}
+.brand-tab{
+  flex:0 0 auto; padding:8px 16px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg-card); color:var(--muted);
+  font-size:.75rem; font-weight:700; white-space:nowrap; font-family:inherit;
+  transition:.15s;
+}
+.brand-tab:hover{color:var(--ink); border-color:var(--teal);}
+.brand-tab.active{
+  background:linear-gradient(120deg,var(--teal),#8b7fe0 55%,var(--pink));
+  color:#fff; border-color:transparent;
+}
+
+/* ---------- horizontal product row (swipe sideways) ---------- */
+.theme-dark .grid{
+  display:flex; gap:14px; overflow-x:auto; padding:0 6px 14px;
+  -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+}
+.theme-dark .grid::-webkit-scrollbar{display:none;}
+.theme-dark .grid > *{
+  flex:0 0 62%; max-width:230px; scroll-snap-align:start;
+}
+@media(min-width:640px){ .theme-dark .grid > *{flex:0 0 33%;} }
+@media(min-width:960px){ .theme-dark .grid > *{flex:0 0 24%;} }
