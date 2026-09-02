@@ -37,6 +37,14 @@
 <section class="theme-dark">
   <div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
   <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
+  <div class="brand-tabs" id="brandTabs">
+    <button class="brand-tab active" data-brand="" onclick="setBrand(this)">Бүгд</button>
+    <button class="brand-tab" data-brand="nike" onclick="setBrand(this)">Nike</button>
+    <button class="brand-tab" data-brand="adidas" onclick="setBrand(this)">Adidas</button>
+    <button class="brand-tab" data-brand="under_armour" onclick="setBrand(this)">Under Armour</button>
+    <button class="brand-tab" data-brand="olive_young" onclick="setBrand(this)">Olive Young</button>
+    <button class="brand-tab" data-brand="other" onclick="setBrand(this)">Бусад</button>
+  </div>
   <div id="products" class="grid"></div>
 </section>
 
