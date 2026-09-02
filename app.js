@@ -3,6 +3,8 @@ let myOrders=[];
 
 const $=id=>document.getElementById(id);
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
+const BRAND_LABELS = { nike:"Nike", adidas:"Adidas", under_armour:"Under Armour", olive_young:"Olive Young" };
+const BRAND_KEYS = Object.keys(BRAND_LABELS);
 const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Каргонд өгсөн", mongolia:"Монголд буусан", cancelled:"Цуцлагдсан" };
 
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
@@ -326,9 +328,24 @@ function showOrderSuccess(code){
 }
 function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
 
+let activeBrand = "";
+
+function setBrand(btn){
+  document.querySelectorAll(".brand-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  activeBrand = btn.dataset.brand || "";
+  filterProducts();
+}
+
 function filterProducts(){
-  const q=$("productSearch").value.trim().toLowerCase();
-  const filtered = q ? products.filter(p=>(p.name||"").toLowerCase().includes(q)) : products;
+  const q=($("productSearch")?.value||"").trim().toLowerCase();
+  let filtered = products;
+  if(q) filtered = filtered.filter(p=>(p.name||"").toLowerCase().includes(q));
+  if(activeBrand){
+    filtered = activeBrand === "other"
+      ? filtered.filter(p=>!BRAND_KEYS.includes(p.brand))
+      : filtered.filter(p=>p.brand === activeBrand);
+  }
   $("products").innerHTML = filtered.length ? filtered.map(productCardHtml).join("") : `<div class="admin-card">Хайлтад тохирох бараа олдсонгүй.</div>`;
 }
 
@@ -487,6 +504,13 @@ async function adminTab(tab){
               <option value="kr_belen">Солонгост бэлэн</option>
               <option value="order">Захиалгийн бараа</option>
             </select>
+            <select id="pbrand">
+              <option value="">Брэнд сонгох</option>
+              <option value="nike">Nike</option>
+              <option value="adidas">Adidas</option>
+              <option value="under_armour">Under Armour</option>
+              <option value="olive_young">Olive Young</option>
+            </select>
           </div>
           <input id="ppickup" placeholder="📍 Авах цэг (жиш: Улаанбаатар, Драгон карго)">
 
@@ -626,7 +650,7 @@ function renderAdminProductsList(ps){
       <div>
         <b>${esc(p.name)}</b> — ${money(p.price)}
         <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
-        <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}</small>
+        <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}${p.brand?" · "+esc(BRAND_LABELS[p.brand]||p.brand):""}</small>
         ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
         <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
       </div>
@@ -845,6 +869,7 @@ async function addProduct(){
     price_krw:$("pkrw").value,
     stock,
     category:$("pc").value,
+    brand:$("pbrand").value,
     image:pendingImages[0]||"",
     images:pendingImages,
     pickup:$("ppickup").value,
@@ -881,10 +906,10 @@ async function editProduct(id){
       }
     }
     sizes=newSizes;
-    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,sizes})});
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,sizes,brand:p.brand||""})});
   } else {
     const stock=prompt("Тоо ширхэг",p.stock);
-    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,stock,sizes:[]})});
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,stock,sizes:[],brand:p.brand||""})});
   }
   adminTab("products"); loadProducts();
 }
