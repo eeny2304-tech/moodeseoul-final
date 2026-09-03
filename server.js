@@ -96,6 +96,13 @@ async function dbInit() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_krw numeric DEFAULT 0;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS pickup text DEFAULT '';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand text DEFAULT '';`);
+  // Images live in the database so they survive redeploys regardless of disk/volume setup.
+  await pool.query(`CREATE TABLE IF NOT EXISTS product_images (
+    id serial PRIMARY KEY,
+    mime text NOT NULL,
+    data bytea NOT NULL,
+    created_at timestamptz DEFAULT now()
+  );`);
 
   const count = await pool.query("SELECT COUNT(*)::int AS n FROM admins");
   if (!count.rows[0].n) {
@@ -366,11 +373,49 @@ async function autoCancelStaleOrders() {
   }
 }
 
-const upload = multer({ storage: multer.diskStorage({
-  destination: (_,__,cb)=>cb(null,UPLOAD_DIR),
-  filename: (_,file,cb)=>cb(null, Date.now()+"-"+file.originalname.replace(/[^a-zA-Z0-9._-]/g,""))
-})});
+// Images are kept in the database (or the local JSON store), not on disk.
+const upload = multer({ storage: multer.memoryStorage(), limits:{ fileSize: 8*1024*1024 } });
+
+async function saveImage(file){
+  const mime = file.mimetype || "image/jpeg";
+  if (!usePostgres) {
+    const d = loadJson();
+    d.images = d.images || [];
+    const id = (d.images[d.images.length-1]?.id || 0) + 1;
+    d.images.push({ id, mime, data: file.buffer.toString("base64") });
+    saveJson(d);
+    return "/img/" + id;
+  }
+  const r = await pool.query(
+    "INSERT INTO product_images(mime,data) VALUES($1,$2) RETURNING id",
+    [mime, file.buffer]
+  );
+  return "/img/" + r.rows[0].id;
+}
 const importUpload = multer({ storage: multer.memoryStorage() });
+
+// Serve an image straight from the database.
+app.get("/img/:id", async (req,res)=>{
+  const id = Number(req.params.id);
+  if(!id) return res.status(404).end();
+  try{
+    if(!usePostgres){
+      const d = loadJson();
+      const rec = (d.images||[]).find(x=>x.id===id);
+      if(!rec) return res.status(404).end();
+      res.set("Content-Type", rec.mime);
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+      return res.send(Buffer.from(rec.data, "base64"));
+    }
+    const r = await pool.query("SELECT mime,data FROM product_images WHERE id=$1", [id]);
+    if(!r.rows[0]) return res.status(404).end();
+    res.set("Content-Type", r.rows[0].mime);
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    res.send(r.rows[0].data);
+  }catch(e){
+    res.status(500).end();
+  }
+});
 
 app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgres":"local-json", xlsx: !!XLSX}));
 app.get("/api/debug-reset-admin", async (req,res)=>{
@@ -478,13 +523,18 @@ app.post("/api/orders", async (req,res)=>{
   res.status(201).json(order);
 });
 
-app.post("/api/admin/upload", auth("admin"), upload.single("image"), (req,res)=>{
+app.post("/api/admin/upload", auth("admin"), upload.single("image"), async (req,res)=>{
   if(!req.file) return res.status(400).json({error:"Файл сонгоно уу"});
-  res.json({url:"/uploads/"+req.file.filename});
+  try { res.json({ url: await saveImage(req.file) }); }
+  catch(e){ res.status(500).json({error:"Зураг хадгалахад алдаа: "+e.message}); }
 });
-app.post("/api/admin/upload-many", auth("admin"), upload.array("images", 6), (req,res)=>{
+app.post("/api/admin/upload-many", auth("admin"), upload.array("images", 6), async (req,res)=>{
   if(!req.files || !req.files.length) return res.status(400).json({error:"Файл сонгоно уу"});
-  res.json({urls: req.files.map(f=>"/uploads/"+f.filename)});
+  try {
+    const urls = [];
+    for (const f of req.files) urls.push(await saveImage(f));
+    res.json({ urls });
+  } catch(e){ res.status(500).json({error:"Зураг хадгалахад алдаа: "+e.message}); }
 });
 app.get("/api/admin/products", auth("admin"), async (_,res)=>res.json(await listProducts(true)));
 app.post("/api/admin/products", auth("admin"), async (req,res)=>res.status(201).json(await createProduct(req.body)));
