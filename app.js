@@ -53,6 +53,7 @@ function productCardHtml(p){
 async function loadProducts(){
   products=await api("/api/products");
   $("products").innerHTML = products.length ? products.map(productCardHtml).join("") : `<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`;
+  openProductFromUrl();
 }
 
 function addCart(id){
@@ -124,8 +125,11 @@ function toggleKrwDetail(){
 /* ---------------- Product detail modal ---------------- */
 let pmImages=[], pmIndex=0;
 
-function openProductModal(id){
+function openProductModal(id, skipUrl){
   const p=products.find(x=>x.id==id); if(!p) return;
+  if(!skipUrl){
+    try { history.replaceState(null, "", "?p=" + id); } catch(_){}
+  }
   const sizes=Array.isArray(p.sizes)?p.sizes:[];
   const totalStock = sizes.length ? sizes.reduce((a,s)=>a+(Number(s.qty)||0),0) : Number(p.stock||0);
   pmImages = (Array.isArray(p.images)&&p.images.length) ? p.images : (p.image?[p.image]:['https://placehold.co/800x800?text=MOODE+SEOUL']);
@@ -152,6 +156,7 @@ function openProductModal(id){
       ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
+    <button class="share-btn" onclick="shareProduct(${p.id})">🔗 Линк хуваалцах</button>
   `;
   pmSelectedSize = sizes.length ? (sizes.find(s=>Number(s.qty)>0)?.size ?? null) : null;
   // pre-select the first in-stock size so "Сагсанд нэмэх" always works
@@ -182,7 +187,30 @@ function renderPmGallery(){
 }
 function pmMove(step){ pmIndex=(pmIndex+step+pmImages.length)%pmImages.length; renderPmGallery(); }
 function pmGo(i){ pmIndex=i; renderPmGallery(); }
-function closeProductModal(){ $("productModal").classList.add("hidden"); }
+function closeProductModal(){
+  $("productModal").classList.add("hidden");
+  try { history.replaceState(null, "", location.pathname); } catch(_){}
+}
+
+function shareProduct(id){
+  const p = products.find(x=>x.id==id);
+  const url = location.origin + "/?p=" + id;
+  const title = p ? p.name : "MOODE SEOUL";
+  if(navigator.share){
+    navigator.share({ title, text: title + " — MOODE SEOUL", url }).catch(()=>{});
+  } else {
+    copyAccount({preventDefault(){},stopPropagation(){},target:null}, url);
+    alert("Линк хуулагдлаа:\n" + url);
+  }
+}
+
+// open a product automatically when the page is loaded with ?p=<id>
+function openProductFromUrl(){
+  const id = new URLSearchParams(location.search).get("p");
+  if(!id) return;
+  const exists = products.find(x=>String(x.id)===String(id));
+  if(exists) openProductModal(Number(id), true);
+}
 
 /* ---------------- Fullscreen image lightbox ---------------- */
 let lbIndex = 0;
@@ -322,11 +350,42 @@ async function submitOrder(){
 function showOrderSuccess(code){
   $("successCode").textContent=code;
   $("successBankName").textContent=settings.bankName||"—";
-  $("successBankAccount").textContent=settings.bankAccount||"—";
+  const acct = settings.bankAccount||"—";
+  $("successBankAccount").innerHTML = acct==="—" ? "—"
+    : `${esc(acct)}<button class="copy-btn" onclick="copyAccount(event,'${esc(acct)}')">Хуулах</button>`;
+  $("successBankAccount").classList.add("acct");
   $("successBankHolder").textContent=settings.bankHolder||"—";
   $("orderSuccessModal").classList.remove("hidden");
 }
 function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
+
+/* ---------------- Copy account number ---------------- */
+function copyAccount(e, value){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  const done = ()=>{
+    const btn = e && e.target;
+    if(!btn) return;
+    const old = btn.textContent;
+    btn.textContent = "Хуулсан ✓";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = old; btn.classList.remove("copied"); }, 1600);
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(value).then(done).catch(()=>fallbackCopy(value, done));
+  } else {
+    fallbackCopy(value, done);
+  }
+}
+function fallbackCopy(value, done){
+  const ta = document.createElement("textarea");
+  ta.value = value;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); done(); } catch(_) { alert("Хуулж чадсангүй: " + value); }
+  document.body.removeChild(ta);
+}
 
 let activeBrand = "";
 
