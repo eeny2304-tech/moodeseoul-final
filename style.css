@@ -771,3 +771,24 @@ button.primary:active{opacity:.85;}
 /* keep product-modal media at full size inside the flex column */
 .product-modal-box > *{flex-shrink:0;}
 .product-modal-box{overflow-y:auto;}
+
+/* ---------- copy account button ---------- */
+.acct{display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+.copy-btn{
+  padding:4px 10px; border-radius:7px; cursor:pointer; font-family:inherit;
+  border:1px solid var(--line); background:var(--bg-card-2); color:var(--muted);
+  font-size:.64rem; font-weight:700; white-space:nowrap; transition:.15s;
+}
+.copy-btn:hover{color:var(--ink); border-color:var(--teal);}
+.copy-btn.copied{
+  background:linear-gradient(120deg,var(--teal),#8b7fe0 55%,var(--pink));
+  color:#fff; border-color:transparent;
+}
+
+/* ---------- share product button ---------- */
+.share-btn{
+  width:100%; margin-top:8px; padding:11px; border-radius:10px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg-card-2); color:var(--ink);
+  font-size:.78rem; font-weight:700; font-family:inherit;
+}
+.share-btn:hover{border-color:var(--teal);}
