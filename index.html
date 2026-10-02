@@ -49,7 +49,7 @@
       <span class="soc-name">moode_seoul</span>
     </a>
   </div>
-  <div class="hero-card"><b>Хүргэлт</b><strong id="airDays">5-7 хоног</strong><span>агаар</span><strong id="groundDays">14-16 хоног</strong><span>газар</span></div>
+  <div class="hero-card"><b>Хүргэлт</b><strong id="groundDays">14-16 хоног</strong><span>газрын карго</span></div>
 </section>
 
 <section class="theme-dark">
@@ -251,13 +251,13 @@
 
   <input id="customerName" placeholder="Нэр">
   <input id="customerPhone" placeholder="Утасны дугаар">
-  <input id="customerAddress" class="hidden" placeholder="Хүлээн авах хаяг">
-  <select id="cargoType" onchange="updateCargoBranches()">
-    <option value="air">✈️ Агаарын карго — 5-7 хоног (1кг 10,500₩)</option>
-    <option value="ground">🚚 Газрын карго — 14-16 хоног (1кг 2,700₩)</option>
-  </select>
-  <select id="cargoBranchSelect" onchange="showBranchDetail()"></select>
-  <div id="branchDetail" class="branch-detail"></div>
+  <input id="customerAddress" placeholder="Хүлээн авах хаяг (дүүрэг, хороо, байр, тоот)">
+
+  <label class="file-btn receipt-btn">🧾 Гүйлгээний баримт хавсаргах (заавал биш)
+    <input type="file" id="receiptFile" accept="image/*" onchange="uploadReceipt(this)">
+  </label>
+  <div id="receiptPreview" class="receipt-preview"></div>
+  <input type="hidden" id="receiptUrl">
   <button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button>
 </div>
 
@@ -302,7 +302,7 @@
     <div class="faq-item"><b>1. Бараа хаанаас ирдэг вэ?</b><p>Бүх барааг 🇰🇷 Солонгосоос brand outlet-ээс авч эсвэл албан ёсны сайтнаас нь авч хүргэдэг.</p></div>
     <div class="faq-item"><b>2. Бараа жинхэнэ юу?</b><p>Тийм ээ. Бид албан ёсны дэлгүүр болон найдвартай албан ёсны сайтнаас бараагаа шууд захиалдаг. 🤍</p></div>
     <div class="faq-item"><b>3. Яагаад урьдчилж захиалга авдаг вэ?</b><p>Бид бэлэн бараа бөөнөөр нь хадгалах бус, таны сонгосон барааг Солонгосоос захиалж авчирдаг тул хүссэн загвар, размер, өнгөө захиалах боломжтой.</p></div>
-    <div class="faq-item"><b>4. Захиалгын бараа яг хэдийд ирэх вэ?</b><p>✈️ Агаарын тээвэр — ойролцоогоор 5–7 хоног<br>🚚 Газрын тээвэр — ойролцоогоор 14–16 хоног<br>Тээвэрлэлтийн нөхцөлөөс шалтгаалан бага зэрэг хэлбэлзэж болно.</p></div>
+    <div class="faq-item"><b>4. Захиалгын бараа яг хэдийд ирэх вэ?</b><p>🚚 Газрын карго — ойролцоогоор 14–16 хоног<br>Тээвэрлэлтийн нөхцөлөөс шалтгаалан бага зэрэг хэлбэлзэж болно.</p></div>
     <div class="faq-item"><b>5. Размерээ яаж зөв сонгох вэ?</b><p>Бараа бүрийн размерын мэдээллийг шалгаж, шаардлагатай бол бид танд размер сонгоход зөвлөж өгнө. 📏</p></div>
     <div class="faq-item"><b>6. Захиалсан бараа дуусчихвал яах вэ?</b><p>Захиалга хийх үед тухайн барааны үлдэгдлийг шалгадаг. Хэрэв захиалсны дараа бараа дууссан тохиолдолд бид танд шууд мэдэгдэж буцаалт хийж өгнө 🤍</p></div>
     <div class="faq-item"><b>7. Захиалгаа цуцлах эсвэл өөрчлөх боломжтой юу?</b><p>Бараа Солонгосоос захиалагдахаас өмнө өөрчлөх боломжтой. Харин захиалга баталгаажиж, бараа захиалагдсан бол цуцлах/өөрчлөх боломжгүй.</p></div>
@@ -358,6 +358,9 @@
   </div>
 </div>
 
+<a class="chat-fab" href="https://www.facebook.com/share/1CKXjZaedR/?mibextid=wwXIfr" aria-label="Мессеж бичих">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 2C6.3 2 2 6.2 2 11.6c0 3 1.4 5.7 3.7 7.4v3.6l3.4-1.9c.9.25 1.9.4 2.9.4 5.7 0 10-4.2 10-9.5S17.7 2 12 2Zm1 12.3-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7Z"/></svg>
+</a>
 <button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
 
 <footer class="site-footer">
