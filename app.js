@@ -1,4 +1,11 @@
 let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
+
+// Keep the cart across page reloads.
+const CART_KEY = "moode_cart";
+try { cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch(_) { cart = []; }
+function saveCart(){
+  try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch(_){}
+}
 let myOrders=[];
 
 const $=id=>document.getElementById(id);
@@ -11,15 +18,14 @@ async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Conte
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 const CARGO_LABELS = {
-  air: "✈️ Агаар 5-7 хоног",
   ground: "🚚 Газар 14-16 хоног",
   delivery: "🛵 Монголд хүргэлт (7,000₮)",
   pickup_kr: "🇰🇷 Солонгост хүлээн авна"
 };
-function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.air; }
+function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
-async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("airDays").textContent=s.airCargo;$("groundDays").textContent=s.groundCargo;loadProducts()}
+async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("groundDays").textContent=s.groundCargo;loadProducts()}
 
 /* ---------------- Storefront products ---------------- */
 
@@ -66,12 +72,13 @@ function addCart(id){
 }
 
 function renderCart(){
+  saveCart();
   $("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);
   $("cartItems").innerHTML=cart.length
     ? cart.map(x=>`<div class="cart-item"><span>${esc(x.name)}${x.size?` (${esc(x.size)})`:""} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`
     : `<p>Сагс хоосон байна.</p>`;
 }
-function openCart(){$("cart").classList.remove("hidden");renderCart();updateCargoBranches();updateCheckoutMode()} function closeCart(){$("cart").classList.add("hidden")}
+function openCart(){$("cart").classList.remove("hidden");renderCart();updateCheckoutMode()} function closeCart(){$("cart").classList.add("hidden")}
 
 /* ---------------- Checkout mode by product category ----------------
    mn_belen  → already in Mongolia: direct delivery (7,000₮), no cargo
@@ -99,14 +106,13 @@ function updateCheckoutMode(){
   const isCargo = mode === "cargo";
 
   $("cargoBlock").classList.toggle("hidden", !isCargo);
-  $("cargoType").classList.toggle("hidden", !isCargo);
-  $("cargoBranchSelect").classList.toggle("hidden", !isCargo);
-  $("branchDetail").classList.toggle("hidden", !isCargo);
 
-  $("customerAddress").classList.toggle("hidden", isCargo);
+  $("customerAddress").classList.remove("hidden");
   $("deliveryNote").classList.toggle("hidden", mode !== "mn_direct");
 
-  if(mode === "mn_direct"){
+  if(mode === "cargo"){
+    $("customerAddress").placeholder = "Хүлээн авах хаяг (дүүрэг, хороо, байр, тоот)";
+  } else if(mode === "mn_direct"){
     $("customerAddress").placeholder = "Хүлээн авах хаяг (Монгол)";
   } else if(mode === "kr_direct"){
     $("customerAddress").placeholder = "Хүлээн авах хаяг (Солонгос)";
@@ -280,36 +286,6 @@ function scrollToContact(e){ if(e) e.preventDefault(); $("contactBlock").scrollI
 function openFaq(e){ if(e) e.preventDefault(); $("faqModal").classList.remove("hidden"); }
 function closeFaq(){ $("faqModal").classList.add("hidden"); }
 
-const CARGO_BRANCHES = {
-  air: [
-    {name:"1-р салбар — Баянгол дүүрэг (БГД)", detail:"3,4-р хороолол (Таван-эрдэнэ) хүнсний захын хажууд, 44-р байрны 1 давхарт · 11-360880"},
-    {name:"2-р салбар — Сонгинохайрхан дүүрэг (СХД)", detail:"1-р хороолол (Сапоро \"Хаан банк\"-ны баруун талд), Цамбагярав 6-р байрны 1 давхарт · 7018-3765"},
-    {name:"3-р салбар — Баянзүрх дүүрэг (БЗД)", detail:"Сансар (Сансарын Түйн дээгүүр \"Алтан жолоо\" группийн урд), 2 давхар байрны 2 давхарт · 11-457186"},
-    {name:"4-р салбар — Хан-Уул дүүрэг (ХУД)", detail:"Хоум Плазалийн баруун талд, Төв цэнгэлдэхийн хашааны дотор, урд хийнүүр 9-р павильон · 11-301710"},
-    {name:"5-р салбар — Хан-Уул дүүрэг (ХУД)", detail:"Нисэхийн-Сонсголон колонкийн зүүн эргэт иржийн Нисэхийн Удирдах газрын дэргэд МК Төв · 7277-9999"}
-  ],
-  ground: [
-    {name:"Oneway Cargo", detail:"БГД, 3-р эмнэлгийн хойно \"Ачтан\" эмнэлгийн баруун талд, 4 давхар тоосгон байрлагын 1 давхарт · 8601-9921 / 8602-9921"}
-  ]
-};
-
-function updateCargoBranches(){
-  const type=$("cargoType").value;
-  const list=CARGO_BRANCHES[type]||[];
-  $("cargoBranchSelect").innerHTML=list.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}">${esc(b.name)}</option>`).join("");
-  showBranchDetail();
-}
-
-function showBranchDetail(){
-  const box=$("branchDetail");
-  if(!box) return;
-  const type=$("cargoType").value;
-  const list=CARGO_BRANCHES[type]||[];
-  const selectedName=($("cargoBranchSelect").value||"").split(" — ")[0];
-  const b=list.find(x=>x.name===selectedName);
-  box.innerHTML = b ? `<b>📍 ${esc(b.name)}</b><p>${esc(b.detail)}</p>` : "";
-}
-
 async function submitOrder(){
   if(!cart.length)return alert("Сагс хоосон байна.");
   const phone=$("customerPhone").value.trim();
@@ -317,15 +293,14 @@ async function submitOrder(){
 
   const mode = checkoutMode();
   let address = "";
-  let cargo_type = "air";
+  let cargo_type = "ground";
   let note = "";
 
+  address = $("customerAddress").value.trim();
+  if(!address) return alert("Хүлээн авах хаягаа оруулна уу.");
   if(mode === "cargo"){
-    address = $("cargoBranchSelect").value;
-    cargo_type = $("cargoType").value;
+    cargo_type = "ground";
   } else {
-    address = $("customerAddress").value.trim();
-    if(!address) return alert("Хүлээн авах хаягаа оруулна уу.");
     if(mode === "mn_direct"){
       cargo_type = "delivery";
       note = "Монголд бэлэн — хүргэлт (7,000₮ тусдаа)";
@@ -337,8 +312,10 @@ async function submitOrder(){
 
   const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
   try{
-    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address,cargo_type,note,total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
+    const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address,cargo_type,note,receipt:$("receiptUrl").value||"",total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
     cart=[];
+    saveCart();
+    clearReceipt();
     closeCart();
     $("trackInput").value=phone;
     showOrderSuccess(o.order_code);
@@ -358,6 +335,29 @@ function showOrderSuccess(code){
   $("orderSuccessModal").classList.remove("hidden");
 }
 function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
+
+/* ---------------- Payment receipt upload ---------------- */
+async function uploadReceipt(input){
+  const file = input.files[0];
+  if(!file) return;
+  const label = input.closest(".file-btn");
+  if(label) label.classList.add("uploading");
+  const fd = new FormData();
+  fd.append("receipt", file);
+  try{
+    const r = await fetch("/api/receipt", { method:"POST", body: fd });
+    const d = await r.json();
+    if(!r.ok) throw Error(d.error || "Хадгалахад алдаа гарлаа");
+    $("receiptUrl").value = d.url;
+    $("receiptPreview").innerHTML = `<div class="thumb-wrap"><img src="${d.url}"><button type="button" class="thumb-x" onclick="clearReceipt()">×</button></div>`;
+  }catch(e){ alert(e.message); }
+  finally{ if(label) label.classList.remove("uploading"); }
+}
+function clearReceipt(){
+  $("receiptUrl").value = "";
+  $("receiptPreview").innerHTML = "";
+  const f = $("receiptFile"); if(f) f.value = "";
+}
 
 /* ---------------- Copy account number ---------------- */
 function copyAccount(e, value){
@@ -632,7 +632,7 @@ async function adminTab(tab){
 
         <h3 class="section-sub">Эсвэл Excel файлаар</h3>
         <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
-        <p class="muted-note">Толгой мөр шаардлагагүй. Баганы дараалал: Нэр → Утас → Бараа → Хэмжээ → Үнэ → Карго (Air/Ground). Систем утасны дугаарыг олж, түүнийг тойрсон баганаас автоматаар танина.</p>
+        <p class="muted-note">Толгой мөр шаардлагагүй. Баганы дараалал: Нэр → Утас → Бараа → Хэмжээ → Үнэ → Карго. Систем утасны дугаарыг олж, түүнийг тойрсон баганаас автоматаар танина.</p>
 
         <h3 class="section-sub">Захиалгын жагсаалт</h3>
         <div id="ordersAdminList"></div>`;
@@ -654,7 +654,7 @@ async function adminTab(tab){
 
     if(tab==="settings"){
       const s=await api("/api/admin/settings");
-      $("adminContent").innerHTML=`<h2>Дэлгүүрийн тохиргоо</h2><div class="admin-row"><input id="sn" value="${esc(s.storeName)}" placeholder="Нэр"><input id="sphone" value="${esc(s.phone)}" placeholder="Утас"><input id="air" value="${esc(s.airCargo)}" placeholder="Агаар"><input id="ground" value="${esc(s.groundCargo)}" placeholder="Газар"><input id="bank" value="${esc(s.bankName)}" placeholder="Банк"><input id="acct" value="${esc(s.bankAccount)}" placeholder="Данс"><input id="holder" value="${esc(s.bankHolder)}" placeholder="Данс эзэмшигч"><input id="ig" value="${esc(s.instagram)}" placeholder="Instagram"><input id="fb" value="${esc(s.facebook)}" placeholder="Facebook"></div><textarea id="ann">${esc(s.announcement)}</textarea><button class="primary" onclick="saveSettings()">Хадгалах</button><h3>Odoo</h3><p>Railway-ийн Variables хэсэгт ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, ODOO_ENABLED=true тохируулж болно.</p>`;
+      $("adminContent").innerHTML=`<h2>Дэлгүүрийн тохиргоо</h2><div class="admin-row"><input id="sn" value="${esc(s.storeName)}" placeholder="Нэр"><input id="sphone" value="${esc(s.phone)}" placeholder="Утас"><input id="ground" value="${esc(s.groundCargo)}" placeholder="Газар"><input id="bank" value="${esc(s.bankName)}" placeholder="Банк"><input id="acct" value="${esc(s.bankAccount)}" placeholder="Данс"><input id="holder" value="${esc(s.bankHolder)}" placeholder="Данс эзэмшигч"><input id="ig" value="${esc(s.instagram)}" placeholder="Instagram"><input id="fb" value="${esc(s.facebook)}" placeholder="Facebook"></div><textarea id="ann">${esc(s.announcement)}</textarea><button class="primary" onclick="saveSettings()">Хадгалах</button><h3>Odoo</h3><p>Railway-ийн Variables хэсэгт ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, ODOO_ENABLED=true тохируулж болно.</p>`;
     }
   }catch(e){alert(e.message)}
 }
@@ -735,7 +735,6 @@ function openAdminOrderDetail(id){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const created=o.created_at?new Date(o.created_at).toLocaleString("mn-MN"):"—";
   const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
-  const allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
 
   $("orderDetailContent").innerHTML=`
     <p class="success-code">Захиалгын код<br><b>${esc(o.order_code)}</b></p>
@@ -751,6 +750,9 @@ function openAdminOrderDetail(id){
     <h3 class="section-sub">Бараанууд</h3>
     ${items.map(it=>`<div class="admin-card"><b>${esc(it.name)}</b>${it.size?` · Хэмжээ: ${esc(it.size)}`:""} · ${it.qty} ширхэг · ${money(it.price)}</div>`).join("")}
 
+    ${o.receipt?`<h3 class="section-sub">🧾 Гүйлгээний баримт</h3>
+      <a href="${esc(o.receipt)}" target="_blank" rel="noopener"><img class="receipt-img" src="${esc(o.receipt)}" alt="баримт"></a>`:""}
+
     <h3 class="section-sub">Засах</h3>
     <div class="admin-row">
       <select id="mst">${["registered","transport","mongolia","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
@@ -758,10 +760,7 @@ function openAdminOrderDetail(id){
     </div>
     <div class="admin-row">
       <input id="mcargo" value="${esc(o.cargo_code||"")}" placeholder="Карго код">
-      <select id="maddr">
-        <option value="">— Карго салбар сонгох —</option>
-        ${allBranches.map(b=>`<option value="${esc(b.name)} — ${esc(b.detail)}" ${o.address && o.address.startsWith(b.name) ? "selected":""}>${esc(b.name)}</option>`).join("")}
-      </select>
+      <input id="maddr" value="${esc(o.address||"")}" placeholder="Хүлээн авах хаяг">
     </div>
     <div class="admin-row">
       <button class="primary" onclick="saveOrderFromModal(${o.id})">Шинэчлэх</button>
@@ -797,7 +796,6 @@ function addBulkRow(){
     <td><input class="b-price" type="number" placeholder="150000"></td>
     <td>
       <select class="b-cargo">
-        <option value="air">Агаар</option>
         <option value="ground">Газар</option>
       </select>
     </td>
@@ -841,7 +839,6 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
-  window.__allBranches = window.__allBranches || [...CARGO_BRANCHES.air, ...CARGO_BRANCHES.ground];
   $("ordersAdminList").innerHTML = os.length ? `
     <div class="orders-table-wrap">
       <table class="orders-table">
@@ -853,7 +850,7 @@ function renderOrdersAdminList(os){
             const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
             return `<tr>
               <td>${i+1}</td>
-              <td class="ot-code">${esc(o.order_code)}</td>
+              <td class="ot-code">${esc(o.order_code)}${o.receipt?' <span class="has-receipt" title="Баримттай">🧾</span>':''}</td>
               <td>${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
               <td>${money(o.total)}${balance>0?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small>`:`<br><small class="bal-ok">төлөгдсөн</small>`}</td>
               <td><span class="badge status-${o.status}">${STAGE_NAMES[o.status]||o.status}</span></td>
@@ -974,6 +971,6 @@ async function editProduct(id){
 }
 async function deleteProduct(id){if(!confirm("Устгах уу?"))return;await api("/api/admin/products/"+id,{method:"DELETE"});adminTab("products");loadProducts()}
 async function saveOrder(id){await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status:$("st"+id).value,paid:$("paid"+id).value,cargo_code:$("cargo"+id).value,address:$("addr"+id).value})});alert("Захиалга шинэчлэгдлээ");adminTab("orders")}
-async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,airCargo:$("air").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
+async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
 
 init().catch(console.error);renderCart();
