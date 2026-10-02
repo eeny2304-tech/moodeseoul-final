@@ -37,7 +37,6 @@ const defaultData = {
   settings: {
     storeName: process.env.STORE_NAME || "MOODE SEOUL",
     phone: process.env.STORE_PHONE || "(976) 7288-3815",
-    airCargo: process.env.AIR_CARGO_DAYS || "5-7 хоног",
     groundCargo: process.env.GROUND_CARGO_DAYS || "14-16 хоног",
     bankName: "Хаан банк",
     bankAccount: "5071274473",
@@ -85,7 +84,7 @@ async function dbInit() {
     );
     CREATE TABLE IF NOT EXISTS orders (
       id serial PRIMARY KEY, order_code text UNIQUE NOT NULL, customer_phone text NOT NULL, customer_name text DEFAULT '',
-      items jsonb NOT NULL, total numeric NOT NULL, paid numeric DEFAULT 0, cargo_type text DEFAULT 'air',
+      items jsonb NOT NULL, total numeric NOT NULL, paid numeric DEFAULT 0, cargo_type text DEFAULT 'ground',
       cargo_code text DEFAULT '', status text DEFAULT 'registered', address text DEFAULT '', note text DEFAULT '',
       created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()
     );
@@ -96,6 +95,7 @@ async function dbInit() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_krw numeric DEFAULT 0;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS pickup text DEFAULT '';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand text DEFAULT '';`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt text DEFAULT '';`);
   // Images live in the database so they survive redeploys regardless of disk/volume setup.
   await pool.query(`CREATE TABLE IF NOT EXISTS product_images (
     id serial PRIMARY KEY,
@@ -287,9 +287,9 @@ async function createOrder(o) {
     saveJson(d); created = item;
   } else {
     const code=await orderCode();
-    const r=await pool.query(`INSERT INTO orders(order_code,customer_phone,customer_name,items,total,paid,cargo_type,cargo_code,status,address,note)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [code,normalizePhone(o.customer_phone),o.customer_name||"",JSON.stringify(o.items||[]),Number(o.total)||0,Number(o.paid)||0,o.cargo_type||"air",o.cargo_code||"",o.status||"registered",o.address||"",o.note||""]);
+  const r=await pool.query(`INSERT INTO orders(order_code,customer_phone,customer_name,items,total,paid,cargo_type,cargo_code,status,address,note,receipt)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [code,normalizePhone(o.customer_phone),o.customer_name||"",JSON.stringify(o.items||[]),Number(o.total)||0,Number(o.paid)||0,o.cargo_type||"ground",o.cargo_code||"",o.status||"registered",o.address||"",o.note||"",o.receipt||""]);
     await pool.query(`INSERT INTO customers(phone,name) VALUES($1,$2) ON CONFLICT(phone) DO UPDATE SET name=COALESCE(NULLIF(EXCLUDED.name,''),customers.name)`,
       [normalizePhone(o.customer_phone),o.customer_name||""]);
     created = r.rows[0];
@@ -418,41 +418,6 @@ app.get("/img/:id", async (req,res)=>{
 });
 
 app.get("/api/health", (_,res)=>res.json({ok:true, database:usePostgres?"postgres":"local-json", xlsx: !!XLSX}));
-app.get("/api/debug-reset-admin", async (req,res)=>{
-  if (req.query.token !== "moodefix2026") return res.status(403).json({error:"forbidden"});
-  const phone = normalizePhone("97672883815");
-  const newPassword = "Moode2026!";
-  const hash = await bcrypt.hash(newPassword, 10);
-  if (!usePostgres) {
-    const d = loadJson();
-    const i = d.admins.findIndex(a => a.phone === phone);
-    if (i >= 0) d.admins[i].passwordHash = hash;
-    else d.admins.push({ id: 1, phone, passwordHash: hash, name: "Admin" });
-    saveJson(d);
-  } else {
-    const existing = await pool.query("SELECT id FROM admins WHERE phone=$1", [phone]);
-    if (existing.rows[0]) {
-      await pool.query("UPDATE admins SET password_hash=$1 WHERE phone=$2", [hash, phone]);
-    } else {
-      await pool.query("INSERT INTO admins(phone,password_hash,name) VALUES($1,$2,$3)", [phone, hash, "Admin"]);
-    }
-  }
-  res.json({ ok: true, message: "Admin reset. Login with the phone number and new password provided separately." });
-});
-
-app.get("/api/debug-admin-env", (req,res)=>{
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-  const u = String(process.env.ADMIN_USER || "");
-  const p = String(process.env.ADMIN_PASSWORD || "");
-  res.json({
-    envUserSet: !!u,
-    envUserLen: u.length,
-    envUserFirst2: u.slice(0,2),
-    envPassSet: !!p,
-    envPassLen: p.length,
-    checkedAt: new Date().toISOString()
-  });
-});
 app.get("/api/settings", async (_,res)=>res.json(await getSettings()));
 app.get("/api/products", async (_,res)=>res.json(await listProducts(false)));
 
@@ -516,10 +481,17 @@ app.get("/api/orders/by-phone", async (req,res)=>{
   if(phone.length<8) return res.status(400).json({error:"Утасны дугаар оруулна уу"});
   res.json(await findOrders(phone));
 });
+// Customers upload a payment receipt image (no admin auth needed).
+app.post("/api/receipt", upload.single("receipt"), async (req,res)=>{
+  if(!req.file) return res.status(400).json({error:"Зураг сонгоно уу"});
+  try { res.json({ url: await saveImage(req.file) }); }
+  catch(e){ res.status(500).json({error:"Хадгалахад алдаа: "+e.message}); }
+});
+
 app.post("/api/orders", async (req,res)=>{
-  const {customer_phone,customer_name,items,total,cargo_type,address,note}=req.body;
+  const {customer_phone,customer_name,items,total,cargo_type,address,note,receipt}=req.body;
   if(!customer_phone || !Array.isArray(items) || !items.length) return res.status(400).json({error:"Захиалгын мэдээлэл дутуу"});
-  const order=await createOrder({customer_phone,customer_name,items,total,cargo_type,address,note,paid:0});
+  const order=await createOrder({customer_phone,customer_name,items,total,cargo_type,address,note,receipt,paid:0});
   res.status(201).json(order);
 });
 
@@ -591,7 +563,7 @@ app.post("/api/admin/orders/bulk", auth("admin"), async (req,res)=>{
     const productName = String(row.product||"").trim();
     const size = String(row.size||"").trim();
     const price = Number(row.price)||0;
-    const cargo_type = row.cargo_type==="ground" ? "ground" : "air";
+    const cargo_type = "ground";
     const cargo_code = String(row.cargo_code||"").trim();
 
     const order = await createOrder({
@@ -638,7 +610,7 @@ app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"),
       const size = cells[phoneIdx + 2] || "";
       const price = Number(String(cells[phoneIdx + 3] || "").replace(/[^\d.]/g, "")) || 0;
       const cargoRaw = (cells[phoneIdx + 4] || "").toLowerCase();
-      const cargo_type = cargoRaw.includes("air") || cargoRaw.includes("агаар") ? "air" : "ground";
+      const cargo_type = "ground";
 
       const order = await createOrder({
         customer_phone: phone,
