@@ -839,21 +839,30 @@ async function submitBulkOrders(){
 }
 
 function renderOrdersAdminList(os){
+  window.__sel = window.__sel || new Set();
+  window.__shownIds = os.map(o=>o.id);
+  const stOpts=(cur)=>["registered","transport","mongolia","cancelled"].map(s=>`<option value="${s}" ${cur===s?"selected":""}>${STAGE_NAMES[s]}</option>`).join("");
   $("ordersAdminList").innerHTML = os.length ? `
+    <div class="bulk-status-bar">
+      <b id="selCount">${window.__sel.size} сонгосон</b>
+      <select id="bulkStatus">${stOpts("transport")}</select>
+      <button class="primary" onclick="applyBulkStatus()">Сонгосныг шинэчлэх</button>
+    </div>
     <div class="orders-table-wrap">
       <table class="orders-table">
         <thead><tr>
-          <th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Дүн</th><th>Төлөв</th><th></th>
+          <th><input type="checkbox" onchange="toggleSelAll(this.checked)"></th><th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Дүн</th><th>Төлөв</th><th></th>
         </tr></thead>
         <tbody>
           ${os.map((o,i)=>{
             const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
             return `<tr>
+              <td><input type="checkbox" class="ord-sel" ${window.__sel.has(o.id)?"checked":""} onchange="toggleSel(${o.id},this.checked)"></td>
               <td>${i+1}</td>
               <td class="ot-code">${esc(o.order_code)}${o.receipt?' <span class="has-receipt" title="Баримттай">🧾</span>':''}</td>
               <td>${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
               <td>${money(o.total)}${balance>0?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small>`:`<br><small class="bal-ok">төлөгдсөн</small>`}</td>
-              <td><span class="badge status-${o.status}">${STAGE_NAMES[o.status]||o.status}</span></td>
+              <td><select class="status-sel status-${o.status}" onchange="setOrderStatus(${o.id},this.value,this)">${stOpts(o.status)}</select></td>
               <td class="ot-actions">
                 <button onclick="openAdminOrderDetail(${o.id})">Засах</button>
                 <button class="row-x" onclick="deleteOrderAdmin(${o.id})">✕</button>
@@ -974,3 +983,33 @@ async function saveOrder(id){await api("/api/admin/orders/"+id,{method:"PUT",bod
 async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
 
 init().catch(console.error);renderCart();
+
+
+function toggleSel(id,on){
+  window.__sel=window.__sel||new Set();
+  on?window.__sel.add(id):window.__sel.delete(id);
+  const c=$("selCount"); if(c) c.textContent=window.__sel.size+" сонгосон";
+}
+function toggleSelAll(on){
+  (window.__shownIds||[]).forEach(id=>on?window.__sel.add(id):window.__sel.delete(id));
+  document.querySelectorAll(".ord-sel").forEach(cb=>cb.checked=on);
+  const c=$("selCount"); if(c) c.textContent=window.__sel.size+" сонгосон";
+}
+async function setOrderStatus(id,status,el){
+  try{
+    await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status})});
+    const o=(window.__allOrders||[]).find(x=>x.id==id); if(o) o.status=status;
+    if(el) el.className="status-sel status-"+status;
+  }catch(e){ alert(e.message); }
+}
+async function applyBulkStatus(){
+  const ids=[...(window.__sel||[])];
+  if(!ids.length) return alert("Захиалга сонгоно уу.");
+  const status=$("bulkStatus").value;
+  if(!confirm(ids.length+" захиалгыг \""+STAGE_NAMES[status]+"\" болгох уу?")) return;
+  try{
+    await Promise.all(ids.map(id=>api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status})})));
+    window.__sel=new Set();
+    adminTab("orders");
+  }catch(e){ alert(e.message); }
+}
