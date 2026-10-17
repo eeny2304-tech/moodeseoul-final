@@ -18,14 +18,14 @@ async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Conte
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 const CARGO_LABELS = {
-  ground: "🚚 Газар 14-16 хоног",
+  ground: "🚚 Express газрын карго 10-12 хоног",
   delivery: "🛵 Монголд хүргэлт (7,000₮)",
   pickup_kr: "🇰🇷 Солонгост хүлээн авна"
 };
 function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
-async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;$("groundDays").textContent=s.groundCargo;loadProducts()}
+async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;loadProducts()}
 
 /* ---------------- Storefront products ---------------- */
 
@@ -157,8 +157,8 @@ function openProductModal(id, skipUrl){
     `:`<p class="pm-stock">${totalStock>0?"Бэлэн: "+totalStock+" ширхэг":"Дууссан"}</p>`}
     ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
     <div class="pm-cargo">
-      <b>🚚 Каргоны төлбөр тусдаа</b>
-      <p>Барааны үнэ болон каргоны төлбөр тусдаа. Бараа Монголд ирсний дараа карго тантай холбогдож, та каргоны төлбөрөө төлөөд бараагаа авна.</p>
+      <b>🚚 Express газрын карго</b>
+      <p>⏰ 10-12 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
       ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
@@ -615,30 +615,13 @@ async function adminTab(tab){
           <input id="orderSearch" placeholder="Утас, нэр, захиалгын кодоор хайх" oninput="filterOrdersAdmin()">
         </div>
 
-        <h3 class="section-sub">⚡ Түргэн бүртгэл</h3>
-        <p class="muted-note">Spreadsheet-с шууд хуулж тавьж болно — мөр бүр нэг захиалга.</p>
-        <div class="bulk-table-wrap">
-          <table class="bulk-table" id="bulkTable">
-            <thead><tr>
-              <th>Утас</th><th>Нэр</th><th>Бараа</th><th>Хэмжээ</th><th>Үнэ</th><th>Карго</th><th>Код</th><th></th>
-            </tr></thead>
-            <tbody id="bulkTableBody"></tbody>
-          </table>
-        </div>
         <div class="admin-row">
-          <button type="button" class="file-btn" onclick="addBulkRow()">+ Мөр нэмэх</button>
-          <button class="primary" onclick="submitBulkOrders()">Бүх мөрийг бүртгэх</button>
+          <button class="primary" onclick="openAddOrders()">＋ Захиалга нэмэх</button>
         </div>
-
-        <h3 class="section-sub">Эсвэл Excel файлаар</h3>
-        <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
-        <p class="muted-note">Толгой мөр шаардлагагүй. Баганы дараалал: Нэр → Утас → Бараа → Хэмжээ → Үнэ → Карго. Систем утасны дугаарыг олж, түүнийг тойрсон баганаас автоматаар танина.</p>
 
         <h3 class="section-sub">Захиалгын жагсаалт</h3>
         <div id="ordersAdminList"></div>`;
       renderOrdersAdminList(os);
-      bulkRows=[];
-      addBulkRow(); addBulkRow(); addBulkRow();
     }
 
     if(tab==="customers"){
@@ -783,6 +766,13 @@ async function saveOrderFromModal(id){
 let bulkRows = [];
 let bulkRowSeq = 0;
 
+function openAddOrders(){
+  bulkRows=[]; $("bulkTableBody").innerHTML="";
+  addBulkRow(); addBulkRow(); addBulkRow();
+  $("addOrdersModal").classList.remove("hidden");
+}
+function closeAddOrders(){ $("addOrdersModal").classList.add("hidden"); }
+
 function addBulkRow(){
   const id = ++bulkRowSeq;
   bulkRows.push(id);
@@ -834,6 +824,7 @@ async function submitBulkOrders(){
     const d = await r.json();
     if (!r.ok) throw Error(d.error||"Алдаа гарлаа");
     alert(`Бүртгэгдсэн: ${d.created}, алгассан: ${d.skipped}`);
+    closeAddOrders();
     adminTab("orders");
   }catch(e){ alert(e.message); }
 }
@@ -843,10 +834,12 @@ function renderOrdersAdminList(os){
   window.__shownIds = os.map(o=>o.id);
   const stOpts=(cur)=>["registered","transport","mongolia","cancelled"].map(s=>`<option value="${s}" ${cur===s?"selected":""}>${STAGE_NAMES[s]}</option>`).join("");
   $("ordersAdminList").innerHTML = os.length ? `
-    <div class="bulk-status-bar">
+    <div class="bulk-status-bar ${window.__sel.size?'':'hidden'}" id="bulkBar">
       <b id="selCount">${window.__sel.size} сонгосон</b>
       <select id="bulkStatus">${stOpts("transport")}</select>
-      <button class="primary" onclick="applyBulkStatus()">Сонгосныг шинэчлэх</button>
+      <button class="primary" onclick="applyBulkStatus()">Төлөв солих</button>
+      <button class="danger" onclick="deleteSelectedOrders()">🗑 Сонгосныг устгах</button>
+      <button type="button" onclick="clearSel()">Болих</button>
     </div>
     <div class="orders-table-wrap">
       <table class="orders-table">
@@ -921,6 +914,8 @@ async function importOrders(input){
     const d=await r.json();
     if(!r.ok) throw Error(d.error||"Импорт хийхэд алдаа гарлаа");
     alert(`Импортлогдсон: ${d.imported}, алгассан: ${d.skipped||0}`);
+    input.value="";
+    closeAddOrders();
     adminTab("orders");
   }catch(e){alert(e.message)}
 }
@@ -988,12 +983,32 @@ init().catch(console.error);renderCart();
 function toggleSel(id,on){
   window.__sel=window.__sel||new Set();
   on?window.__sel.add(id):window.__sel.delete(id);
+  refreshSelBar();
+}
+function refreshSelBar(){
   const c=$("selCount"); if(c) c.textContent=window.__sel.size+" сонгосон";
+  const b=$("bulkBar"); if(b) b.classList.toggle("hidden", !window.__sel.size);
+}
+function clearSel(){
+  window.__sel=new Set();
+  document.querySelectorAll(".ord-sel").forEach(cb=>cb.checked=false);
+  const all=document.querySelector(".orders-table thead input[type=checkbox]"); if(all) all.checked=false;
+  refreshSelBar();
+}
+async function deleteSelectedOrders(){
+  const ids=[...(window.__sel||[])];
+  if(!ids.length) return;
+  if(!confirm(ids.length+" захиалгыг УСТГАХ уу? Буцаах боломжгүй.")) return;
+  try{
+    await Promise.all(ids.map(id=>api("/api/admin/orders/"+id,{method:"DELETE"})));
+    window.__sel=new Set();
+    adminTab("orders");
+  }catch(e){ alert(e.message); }
 }
 function toggleSelAll(on){
   (window.__shownIds||[]).forEach(id=>on?window.__sel.add(id):window.__sel.delete(id));
   document.querySelectorAll(".ord-sel").forEach(cb=>cb.checked=on);
-  const c=$("selCount"); if(c) c.textContent=window.__sel.size+" сонгосон";
+  refreshSelBar();
 }
 async function setOrderStatus(id,status,el){
   try{
