@@ -37,7 +37,7 @@ const defaultData = {
   settings: {
     storeName: process.env.STORE_NAME || "MOODE SEOUL",
     phone: process.env.STORE_PHONE || "(976) 7288-3815",
-    groundCargo: process.env.GROUND_CARGO_DAYS || "14-16 хоног",
+    groundCargo: process.env.GROUND_CARGO_DAYS || "10-12 хоног",
     bankName: "Хаан банк",
     bankAccount: "5071274473",
     bankHolder: "GANBOLD ENKHTSATSRALT",
@@ -601,15 +601,31 @@ app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"),
 
     for (const r of rows) {
       const cells = r.map(c => String(c ?? "").trim());
-      const phoneIdx = cells.findIndex(c => /^\d{6,9}$/.test(c));
+      let phoneIdx = cells.findIndex(c => /^\d{8}$/.test(c));
+      if (phoneIdx === -1) phoneIdx = cells.findIndex(c => /^\d{6,9}$/.test(c));
       if (phoneIdx === -1) { skipped++; continue; }
 
       const phone = cells[phoneIdx];
-      const name = cells[phoneIdx - 1] || "";
-      const productName = cells[phoneIdx + 1] || "";
-      const size = cells[phoneIdx + 2] || "";
-      const price = Number(String(cells[phoneIdx + 3] || "").replace(/[^\d.]/g, "")) || 0;
-      const cargoRaw = (cells[phoneIdx + 4] || "").toLowerCase();
+      let name, productName, size = "", price = 0, cargo_code = "", address = "";
+
+      if (phoneIdx === 0) {
+        // Layout: [Phone] [Name] [Product] [...] [Price] [Cargo text] [Cargo code] [Address]
+        name = cells[1] || "";
+        productName = cells[2] || "";
+        const priceIdx = cells.findIndex((c, i) => i > 2 && /^[\d.,]{4,}$/.test(c));
+        if (priceIdx !== -1) price = Number(cells[priceIdx].replace(/[^\d.]/g, "")) || 0;
+        const cargoIdx = cells.findIndex((c, i) => i > 2 && /kargo|карго|cargo/i.test(c));
+        const afterIdx = cargoIdx !== -1 ? cargoIdx : (priceIdx !== -1 ? priceIdx : 2);
+        const rest = cells.slice(afterIdx + 1).filter(Boolean);
+        if (rest.length && /^\d{3,6}$/.test(rest[0])) { cargo_code = rest.shift(); }
+        address = rest.join(" ");
+      } else {
+        // Layout: [Name] [Phone] [Product] [Size] [Price] [CargoType]
+        name = cells[phoneIdx - 1] || "";
+        productName = cells[phoneIdx + 1] || "";
+        size = cells[phoneIdx + 2] || "";
+        price = Number(String(cells[phoneIdx + 3] || "").replace(/[^\d.]/g, "")) || 0;
+      }
       const cargo_type = "ground";
 
       const order = await createOrder({
@@ -618,8 +634,8 @@ app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"),
         items: [{ name: productName || "Бараа", qty: 1, price, size: size || undefined }],
         total: price,
         cargo_type,
-        cargo_code: "",
-        address: "",
+        cargo_code,
+        address,
         note: "Excel-ээс импортлосон (FB захиалга)"
       });
       imported++;
