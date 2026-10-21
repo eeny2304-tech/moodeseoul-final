@@ -542,7 +542,7 @@ app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
   res.json({
     orders: orders.length,
     active: orders.filter(o=>o.status!=="cancelled").length,
-    delivered: orders.filter(o=>o.status==="mongolia").length,
+    delivered: orders.filter(o=>o.status==="mongolia"||o.status==="delivered").length,
     revenue,
     products: products.length,
     monthly
@@ -633,6 +633,7 @@ app.post("/api/admin/orders/import", auth("admin"), importUpload.single("file"),
         customer_name: name,
         items: [{ name: productName || "Бараа", qty: 1, price, size: size || undefined }],
         total: price,
+        paid: price,
         cargo_type,
         cargo_code,
         address,
