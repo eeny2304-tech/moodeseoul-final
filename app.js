@@ -12,7 +12,7 @@ const $=id=>document.getElementById(id);
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
 const BRAND_LABELS = { nike:"Nike", adidas:"Adidas", under_armour:"Under Armour", olive_young:"Olive Young" };
 const BRAND_KEYS = Object.keys(BRAND_LABELS);
-const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Каргонд өгсөн", mongolia:"Монголд буусан", cancelled:"Цуцлагдсан" };
+const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Каргонд өгсөн", mongolia:"Монголд буусан", delivered:"Дууссан", cancelled:"Цуцлагдсан" };
 
 async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{}),...(adminToken?{Authorization:"Bearer "+adminToken}:{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Алдаа");return d}
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
@@ -422,7 +422,7 @@ async function trackOrders(){
 
 function orderCard(o,i){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
-  const stages=["registered","transport","mongolia"];
+  const stages=["registered","transport","mongolia","delivered"];
   const isCancelled = o.status === "cancelled";
   const idx = stages.indexOf(o.status);
   const first = items[0] || {};
@@ -509,7 +509,7 @@ async function adminTab(tab){
       const unpaid=os.filter(o=>o.status!=="cancelled").reduce((a,o)=>a+Math.max(0,Number(o.total||0)-Number(o.paid||0)),0);
       const cancelled=os.filter(o=>o.status==="cancelled").length;
 
-      const counts={registered:0,transport:0,mongolia:0,cancelled:0};
+      const counts={registered:0,transport:0,mongolia:0,delivered:0,cancelled:0};
       os.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
 
       const monthly=s.monthly||[];
@@ -738,7 +738,7 @@ function openAdminOrderDetail(id){
 
     <h3 class="section-sub">Засах</h3>
     <div class="admin-row">
-      <select id="mst">${["registered","transport","mongolia","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
+      <select id="mst">${["registered","transport","mongolia","delivered","cancelled"].map(s=>`<option ${o.status===s?"selected":""} value="${s}">${STAGE_NAMES[s]||s}</option>`).join("")}</select>
       <input id="mpaid" type="number" value="${o.paid||0}" placeholder="Төлсөн дүн">
     </div>
     <div class="admin-row">
@@ -832,7 +832,7 @@ async function submitBulkOrders(){
 function renderOrdersAdminList(os){
   window.__sel = window.__sel || new Set();
   window.__shownIds = os.map(o=>o.id);
-  const stOpts=(cur)=>["registered","transport","mongolia","cancelled"].map(s=>`<option value="${s}" ${cur===s?"selected":""}>${STAGE_NAMES[s]}</option>`).join("");
+  const stOpts=(cur)=>["registered","transport","mongolia","delivered","cancelled"].map(s=>`<option value="${s}" ${cur===s?"selected":""}>${STAGE_NAMES[s]}</option>`).join("");
   $("ordersAdminList").innerHTML = os.length ? `
     <div class="bulk-status-bar ${window.__sel.size?'':'hidden'}" id="bulkBar">
       <b id="selCount">${window.__sel.size} сонгосон</b>
