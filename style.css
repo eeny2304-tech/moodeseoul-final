@@ -827,3 +827,4 @@ button.primary:active{opacity:.85;}
 .bulk-status-bar button:not(.primary):not(.danger){background:var(--bg-card); border:1px solid var(--line); color:var(--ink); cursor:pointer;}
 
 .add-orders-box{width:min(960px,96vw); max-width:96vw; max-height:90vh; overflow-y:auto;}
+.status-sel.status-delivered{color:#16a34a;}
