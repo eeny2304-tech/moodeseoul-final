@@ -20,8 +20,8 @@ async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Conte
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 const CARGO_LABELS = {
-  ground: "🚚 Express газрын карго 10-12 хоног",
-  delivery: "🛵 Монголд хүргэлт (7,000₮)",
+  ground: "🚚 Express газрын карго 12-14 хоног",
+  delivery: "🛵 Монголд хүргэлт (9,000₮)",
   pickup_kr: "🇰🇷 Солонгост хүлээн авна"
 };
 function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
@@ -35,7 +35,9 @@ function productCardHtml(p){
   const sizes = Array.isArray(p.sizes) ? p.sizes : [];
   const hasSizes = sizes.length > 0;
   const totalStock = hasSizes ? sizes.reduce((s,sz)=>s+(Number(sz.qty)||0),0) : Number(p.stock||0);
-  const sizeOptions = hasSizes ? sizes.map(sz=>`<option value="${esc(sz.size)}" ${Number(sz.qty)<=0?"disabled":""}>${esc(sz.size)} ${Number(sz.qty)<=0?"(дууссан)":"("+sz.qty+")"}</option>`).join("") : "";
+  const firstOk = hasSizes ? (sizes.find(sz=>Number(sz.qty)>0)||{}).size||"" : "";
+  const sizeChips = hasSizes ? `<input type="hidden" id="size-${p.id}" value="${esc(firstOk)}"><div class="size-chips">${sizes.map(sz=>{const out=Number(sz.qty)<=0;return `<button type="button" class="chip ${out?"out":""} ${(!out&&sz.size===firstOk)?"on":""}" ${out?"disabled":""} onclick="pickSize(${p.id},this)" data-size="${esc(sz.size)}">${esc(sz.size)}</button>`}).join("")}</div>` : "";
+  const badge = totalStock<=0 ? `<span class="stock-badge out">ДУУСЛАА</span>` : (totalStock<=3 ? `<span class="stock-badge low">Цөөхөн үлдсэн · ${totalStock}</span>` : "");
   const catLabel = CATEGORY_LABELS[p.category] || "";
 
   const imgs = (Array.isArray(p.images) && p.images.length) ? p.images : (p.image ? [p.image] : []);
@@ -44,16 +46,16 @@ function productCardHtml(p){
     <div class="product-media" onclick="openProductModal(${p.id})">
       <img src="${cover}">
       ${imgs.length>1?`<span class="img-count">📷 ${imgs.length}</span>`:""}
+      ${badge}
     </div>
     <div class="p">
       ${catLabel?`<span class="cat-badge cat-${esc(p.category)}">${catLabel}</span>`:""}
       <h3 onclick="openProductModal(${p.id})">${esc(p.name)}</h3>
       <div class="price">${money(p.price)}</div>
       ${Number(p.price_krw)>0?`<div class="price-krw">${won(p.price_krw)}</div>`:""}
-      ${hasSizes?`<select class="size-select" id="size-${p.id}">${sizeOptions}</select>`:""}
-      <div class="stock">${totalStock>0?"Бэлэн: "+totalStock:"Дууссан"}</div>
-      <button ${totalStock<=0?"disabled":""} onclick="addCart(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
-      <button class="detail-btn" onclick="openProductModal(${p.id})">Дэлгэрэнгүй</button>
+      ${sizeChips}
+      <button class="add-btn" ${totalStock<=0?"disabled":""} onclick="addCart(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
+      <button class="detail-btn" onclick="openProductModal(${p.id})">Дэлгэрэнгүй →</button>
     </div>
   </article>`;
 }
@@ -64,6 +66,10 @@ async function loadProducts(){
   openProductFromUrl();
 }
 
+function pickSize(id,btn){
+  const inp=$("size-"+id); if(inp) inp.value=btn.dataset.size;
+  btn.parentElement.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===btn));
+}
 function addCart(id){
   const p=products.find(x=>x.id==id); if(!p) return;
   const sizeEl=$("size-"+id);
@@ -76,10 +82,17 @@ function addCart(id){
 function renderCart(){
   saveCart();
   $("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);
+  const thumb=x=>{const im=(Array.isArray(x.images)&&x.images[0])||x.image||"";return im?`<img class="ci-img" src="${im}" alt="">`:`<div class="ci-img ci-ph"></div>`;};
   $("cartItems").innerHTML=cart.length
-    ? cart.map(x=>`<div class="cart-item"><span>${esc(x.name)}${x.size?` (${esc(x.size)})`:""} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`
-    : `<p>Сагс хоосон байна.</p>`;
+    ? cart.map((x,i)=>`<div class="cart-item">${thumb(x)}<div class="ci-info"><b>${esc(x.name)}</b>${x.size?`<span>Размер: ${esc(x.size)}</span>`:""}<span>${money(x.price)}</span></div><div class="ci-right"><div class="qty"><button type="button" onclick="changeQty(${i},-1)">−</button><span>${x.qty}</span><button type="button" onclick="changeQty(${i},1)">+</button></div><b>${money(x.price*x.qty)}</b><button type="button" class="ci-del" onclick="removeFromCart(${i})">Устгах</button></div></div>`).join("")+`<div class="cart-total"><span>Барааны нийт дүн</span><b>${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</b></div>`
+    : `<p class="cart-empty">Сагс хоосон байна.</p>`;
 }
+function changeQty(i,d){
+  const it=cart[i]; if(!it) return;
+  it.qty+=d; if(it.qty<=0) cart.splice(i,1);
+  renderCart();
+}
+function removeFromCart(i){ cart.splice(i,1); renderCart(); }
 function openCart(){$("cart").classList.remove("hidden");renderCart();updateCheckoutMode();if(typeof prefillCheckout==="function")prefillCheckout()} function closeCart(){$("cart").classList.add("hidden")}
 
 /* ---------------- Checkout mode by product category ----------------
@@ -422,6 +435,15 @@ async function trackOrders(){
   }catch(e){alert(e.message)}
 }
 
+function trackMsg(o){
+  let t="";
+  const due=Number(o.total||0)-Number(o.paid||0)>0;
+  if(o.status==="registered") t=due?"💳 Төлбөр баталгаажихыг хүлээж байна. Төлбөрөө хийсний дараа баримтаа илгээнэ үү.":"📦 Захиалга баталгаажлаа. Солонгосоос каргонд өгөхөөр бэлтгэж байна.";
+  else if(o.status==="transport") t="🚚 Каргонд өгсөн. Монголд ирмэгц карго тантай холбогдоно."+(o.cargo_code?` Каргоны код: ${o.cargo_code}`:"");
+  else if(o.status==="mongolia") t="🇲🇳 Бараа Монголд ирлээ. Карго тантай холбогдож хүргэнэ."+(o.cargo_code?` Каргоны код: ${o.cargo_code}`:"");
+  else if(o.status==="delivered") t="✅ Хүлээн авсан. Баярлалаа!";
+  return t?`<p class="track-msg">${esc(t)}</p>`:"";
+}
 function orderCard(o,i){
   const items=Array.isArray(o.items)?o.items:(typeof o.items==="string"?JSON.parse(o.items):[]);
   const stages=["registered","transport","mongolia","delivered"];
@@ -459,6 +481,7 @@ function orderCard(o,i){
     </div>
 
     ${stageHtml}
+    ${trackMsg(o)}
     <div class="order-tap-hint">Дэлгэрэнгүй харах →</div>
   </div>`;
 }
@@ -528,7 +551,24 @@ async function adminTab(tab){
           }).join("")}</div>`
         : `<p class="muted-note">Мэдээлэл алга байна.</p>`;
 
+      let lowItems=0;
+      try{ const ps=await api("/api/admin/products"); lowItems=ps.filter(p=>{const t=Array.isArray(p.sizes)&&p.sizes.length?p.sizes.reduce((x,z)=>x+(Number(z.qty)||0),0):Number(p.stock||0);return t<=3;}).length; }catch(_){}
+      const todayKey=now.toISOString().slice(0,10);
+      const newToday=os.filter(o=>String(o.created_at||"").slice(0,10)===todayKey).length;
+      const needPay=os.filter(o=>o.status==="registered"&&Number(o.total||0)-Number(o.paid||0)>0).length;
+      const needShip=os.filter(o=>o.status==="registered"&&Number(o.total||0)-Number(o.paid||0)<=0).length;
+      const arrived=os.filter(o=>o.status==="mongolia").length;
+
       $("adminContent").innerHTML=`<h2>Хяналтын самбар</h2>
+        <h3 class="section-sub">Анхаарах зүйл</h3>
+        <div class="todo-grid">
+          <button class="todo" onclick="gotoOrders('unpaid')"><span>${needPay}</span>Төлбөр хүлээж буй</button>
+          <button class="todo" onclick="gotoOrders('registered')"><span>${needShip}</span>Каргонд өгөх / бүртгэгдсэн</button>
+          <button class="todo" onclick="gotoOrders('mongolia')"><span>${arrived}</span>Монголд ирсэн (хүргэх)</button>
+          <button class="todo ${lowItems?"warn":""}" onclick="adminTab('products')"><span>${lowItems}</span>Дуусах дөхсөн бараа</button>
+          <button class="todo" onclick="gotoOrders('all')"><span>${newToday}</span>Өнөөдрийн шинэ захиалга</button>
+        </div>
+
         <div class="grid">
           <div class="admin-card stat-card"><b>Нийт захиалга</b><h2>${s.orders}</h2></div>
           <div class="admin-card stat-card"><b>Идэвхтэй</b><h2>${s.active}</h2></div>
@@ -616,6 +656,7 @@ async function adminTab(tab){
         <div class="admin-row">
           <input id="orderSearch" placeholder="Утас, нэр, захиалгын кодоор хайх" oninput="filterOrdersAdmin()">
         </div>
+        <div id="ordFilterChips" class="filter-chips"></div>
 
         <div class="admin-row">
           <button class="primary" onclick="openAddOrders()">＋ Захиалга нэмэх</button>
@@ -623,7 +664,7 @@ async function adminTab(tab){
 
         <h3 class="section-sub">Захиалгын жагсаалт</h3>
         <div id="ordersAdminList"></div>`;
-      renderOrdersAdminList(os);
+      filterOrdersAdmin();
     }
 
     if(tab==="customers"){
@@ -696,7 +737,7 @@ function renderAdminProductsList(ps){
         <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
         <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}${p.brand?" · "+esc(BRAND_LABELS[p.brand]||p.brand):""}</small>
         ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
-        <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+        <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
       </div>
     </div>`;
   }).join("") : `<p class="muted-note">Бараа олдсонгүй.</p>`;
@@ -843,21 +884,23 @@ function renderOrdersAdminList(os){
       <button class="danger" onclick="deleteSelectedOrders()">🗑 Сонгосныг устгах</button>
       <button type="button" onclick="clearSel()">Болих</button>
     </div>
-    <div class="orders-table-wrap">
-      <table class="orders-table">
+    <div class="orders-table-wrap ord">
+      <table class="orders-table ord">
         <thead><tr>
-          <th><input type="checkbox" onchange="toggleSelAll(this.checked)"></th><th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Дүн</th><th>Төлөв</th><th></th>
+          <th><input type="checkbox" onchange="toggleSelAll(this.checked)"></th><th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Бараа</th><th>Дүн</th><th>Карго код</th><th>Төлөв</th><th></th>
         </tr></thead>
         <tbody>
           ${os.map((o,i)=>{
             const balance=Math.max(0,Number(o.total||0)-Number(o.paid||0));
             return `<tr>
-              <td><input type="checkbox" class="ord-sel" ${window.__sel.has(o.id)?"checked":""} onchange="toggleSel(${o.id},this.checked)"></td>
-              <td>${i+1}</td>
+              <td class="ot-sel"><input type="checkbox" class="ord-sel" ${window.__sel.has(o.id)?"checked":""} onchange="toggleSel(${o.id},this.checked)"></td>
+              <td class="ot-num">${i+1}</td>
               <td class="ot-code">${esc(o.order_code)}${o.receipt?' <span class="has-receipt" title="Баримттай">🧾</span>':''}</td>
-              <td>${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
-              <td>${money(o.total)}${balance>0?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small>`:`<br><small class="bal-ok">төлөгдсөн</small>`}</td>
-              <td><select class="status-sel status-${o.status}" onchange="setOrderStatus(${o.id},this.value,this)">${stOpts(o.status)}</select></td>
+              <td data-l="Хэрэглэгч">${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
+              <td data-l="Бараа" class="ot-items"><small>${(Array.isArray(o.items)?o.items:[]).map(it=>esc(it.name)+(it.size?" ("+esc(it.size)+")":"")+" ×"+it.qty).join(", ")||"—"}</small></td>
+              <td data-l="Дүн">${money(o.total)}${balance>0&&o.status!=="cancelled"?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small> <button type="button" class="mini-pay" onclick="markPaid(${o.id})">Төлсөн</button>`:`<br><small class="bal-ok">${o.status==="cancelled"?"":"төлөгдсөн"}</small>`}</td>
+              <td data-l="Карго код"><input class="cargo-inp" value="${esc(o.cargo_code||"")}" placeholder="код" onchange="saveCargoCode(${o.id},this)"></td>
+              <td data-l="Төлөв"><select class="status-sel status-${o.status}" onchange="setOrderStatus(${o.id},this.value,this)">${stOpts(o.status)}</select></td>
               <td class="ot-actions">
                 <button onclick="openAdminOrderDetail(${o.id})">Засах</button>
                 <button class="row-x" onclick="deleteOrderAdmin(${o.id})">✕</button>
@@ -878,14 +921,40 @@ async function deleteOrderAdmin(id){
   }catch(e){ alert(e.message); }
 }
 
+function setOrdFilter(f){ window.__ordFilter=f; filterOrdersAdmin(); }
+function gotoOrders(f){ window.__ordFilter=f||"all"; adminTab("orders"); }
 function filterOrdersAdmin(){
-  const q=$("orderSearch").value.trim().toLowerCase();
-  const filtered=(window.__allOrders||[]).filter(o=>
+  const all=window.__allOrders||[];
+  const f=window.__ordFilter||"all";
+  const qEl=$("orderSearch");
+  const q=(qEl?qEl.value:"").trim().toLowerCase();
+  const due=o=>o.status!=="cancelled" && Number(o.total||0)-Number(o.paid||0)>0;
+  const match=o=>f==="all"?true:(f==="unpaid"?due(o):o.status===f);
+  const chips=[["all","Бүгд",all.length],["unpaid","Төлбөр дутуу",all.filter(due).length]].concat(
+    ["registered","transport","mongolia","delivered","cancelled"].map(s=>[s,STAGE_NAMES[s],all.filter(o=>o.status===s).length]));
+  const ce=$("ordFilterChips");
+  if(ce) ce.innerHTML=chips.map(([k,l,n])=>`<button type="button" class="fchip ${f===k?"on":""}" onclick="setOrdFilter('${k}')">${l} <b>${n}</b></button>`).join("");
+  const filtered=all.filter(o=>match(o) && (!q ||
     (o.customer_phone||"").toLowerCase().includes(q) ||
     (o.customer_name||"").toLowerCase().includes(q) ||
-    (o.order_code||"").toLowerCase().includes(q)
-  );
+    (o.order_code||"").toLowerCase().includes(q) ||
+    (o.cargo_code||"").toLowerCase().includes(q)));
   renderOrdersAdminList(filtered);
+}
+async function markPaid(id){
+  const o=(window.__allOrders||[]).find(x=>x.id==id); if(!o) return;
+  try{
+    await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({paid:Number(o.total||0)})});
+    o.paid=Number(o.total||0); filterOrdersAdmin();
+  }catch(e){ alert(e.message); }
+}
+async function saveCargoCode(id,el){
+  const o=(window.__allOrders||[]).find(x=>x.id==id); if(!o) return;
+  const v=el.value.trim(); if(v===(o.cargo_code||"")) return;
+  try{
+    await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({cargo_code:v})});
+    o.cargo_code=v; el.classList.add("saved"); setTimeout(()=>el.classList.remove("saved"),900);
+  }catch(e){ alert(e.message); el.value=o.cargo_code||""; }
 }
 
 function renderCustomersTable(list){
@@ -1058,6 +1127,8 @@ function refreshAuthUi(){
     $("authUserPhone").textContent=user.phone;
   } else authMode(authModeNow);
   const b=$("userBtn"); if(b) b.classList.toggle("logged-in",on);
+  const l=$("userBtnLabel"); if(l) l.textContent=on?(user.name||user.phone):"Нэвтрэх";
+  const cta=$("loginCta"); if(cta) cta.classList.toggle("hidden",on);
 }
 async function submitAuth(){
   const phone=$("authPhone").value.trim(), password=$("authPass").value, name=$("authName").value.trim();
@@ -1098,3 +1169,14 @@ function prefillCheckout(){
   if($("customerPhone") && !$("customerPhone").value) $("customerPhone").value=user.phone||"";
 }
 refreshAuthUi(); if(userToken) showMyOrders(false);
+
+
+async function duplicateProduct(id){
+  const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
+  const {id:_i,created_at:_c,...copy}=p;
+  copy.name=(p.name||"")+" (хуулбар)";
+  try{
+    await api("/api/admin/products",{method:"POST",body:JSON.stringify(copy)});
+    adminTab("products");
+  }catch(e){ alert(e.message); }
+}
