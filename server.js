@@ -90,6 +90,7 @@ async function dbInit() {
     );
   `);
   // Migrations for columns added after initial launch — safe to re-run.
+  await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash text;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes jsonb DEFAULT '[]';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS images jsonb DEFAULT '[]';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_krw numeric DEFAULT 0;`);
@@ -347,8 +348,8 @@ async function deleteOrder(id) {
 }
 
 async function listCustomers() {
-  if (!usePostgres) return loadJson().customers.slice().reverse();
-  return (await pool.query("SELECT * FROM customers ORDER BY created_at DESC")).rows;
+  if (!usePostgres) return loadJson().customers.slice().reverse().map(({passwordHash,...c})=>c);
+  return (await pool.query("SELECT id,phone,name,created_at FROM customers ORDER BY created_at DESC")).rows;
 }
 
 // Cancel unpaid orders left in "registered" status for more than 30 minutes, restoring their stock.
@@ -474,6 +475,67 @@ app.post("/api/auth/customer", async (req,res)=>{
   const phone=normalizePhone(req.body.phone);
   if(phone.length<8) return res.status(400).json({error:"Утасны дугаар буруу"});
   res.json({token:tokenFor({role:"customer",phone}),phone});
+});
+
+// ---------- Customer accounts (phone + password) ----------
+const loginAttempts = new Map();
+function tooManyAttempts(key){
+  const now=Date.now();
+  const a=(loginAttempts.get(key)||[]).filter(t=>now-t<15*60*1000);
+  loginAttempts.set(key,a);
+  return a.length>=8;
+}
+function noteFailedAttempt(key){ const a=loginAttempts.get(key)||[]; a.push(Date.now()); loginAttempts.set(key,a); }
+
+async function getCustomerAccount(phone){
+  if(!usePostgres){
+    const c=loadJson().customers.find(x=>x.phone===phone);
+    return c?{phone:c.phone,name:c.name||"",hash:c.passwordHash||""}:null;
+  }
+  const r=await pool.query("SELECT phone,name,password_hash FROM customers WHERE phone=$1",[phone]);
+  return r.rows[0]?{phone:r.rows[0].phone,name:r.rows[0].name||"",hash:r.rows[0].password_hash||""}:null;
+}
+async function saveCustomerAccount(phone,name,hash){
+  if(!usePostgres){
+    const d=loadJson();
+    const i=d.customers.findIndex(x=>x.phone===phone);
+    if(i>=0){ d.customers[i].passwordHash=hash; if(name) d.customers[i].name=name; }
+    else d.customers.push({id:d.customers.length+1,phone,name,passwordHash:hash});
+    saveJson(d); return;
+  }
+  await pool.query(`INSERT INTO customers(phone,name,password_hash) VALUES($1,$2,$3)
+    ON CONFLICT(phone) DO UPDATE SET password_hash=EXCLUDED.password_hash, name=COALESCE(NULLIF(EXCLUDED.name,''),customers.name)`,[phone,name,hash]);
+}
+
+app.post("/api/auth/register", async (req,res)=>{
+  const phone=normalizePhone(req.body.phone);
+  const name=String(req.body.name||"").trim().slice(0,80);
+  const password=String(req.body.password||"");
+  if(phone.length<8) return res.status(400).json({error:"Утасны дугаараа зөв оруулна уу"});
+  if(password.length<6) return res.status(400).json({error:"Нууц үг дор хаяж 6 тэмдэгт байна"});
+  const existing=await getCustomerAccount(phone);
+  if(existing && existing.hash) return res.status(409).json({error:"Энэ дугаар бүртгэлтэй байна. Нэвтэрнэ үү."});
+  await saveCustomerAccount(phone,name,await bcrypt.hash(password,10));
+  const acc=await getCustomerAccount(phone);
+  res.status(201).json({token:tokenFor({role:"customer",phone,name:acc.name}),phone,name:acc.name});
+});
+
+app.post("/api/auth/login", async (req,res)=>{
+  const phone=normalizePhone(req.body.phone);
+  const password=String(req.body.password||"");
+  const key=(req.ip||"")+"|"+phone;
+  if(tooManyAttempts(key)) return res.status(429).json({error:"Олон удаа буруу оруулсан байна. 15 минутын дараа дахин оролдоно уу."});
+  const acc=phone.length>=8?await getCustomerAccount(phone):null;
+  if(!acc || !acc.hash || !(await bcrypt.compare(password,acc.hash))){
+    noteFailedAttempt(key);
+    return res.status(401).json({error:"Утас эсвэл нууц үг буруу байна"});
+  }
+  res.json({token:tokenFor({role:"customer",phone,name:acc.name}),phone,name:acc.name});
+});
+
+app.get("/api/me", auth("customer"), async (req,res)=>{
+  const acc=await getCustomerAccount(req.user.phone);
+  res.json({phone:req.user.phone,name:acc?acc.name:"",orders:await findOrders(req.user.phone)});
 });
 
 app.get("/api/orders/by-phone", async (req,res)=>{
