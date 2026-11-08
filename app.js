@@ -7,6 +7,8 @@ function saveCart(){
   try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch(_){}
 }
 let myOrders=[];
+let userToken="", user=null;
+try { userToken=localStorage.getItem("moode_user_token")||""; user=JSON.parse(localStorage.getItem("moode_user")||"null"); } catch(_){}
 
 const $=id=>document.getElementById(id);
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
@@ -78,7 +80,7 @@ function renderCart(){
     ? cart.map(x=>`<div class="cart-item"><span>${esc(x.name)}${x.size?` (${esc(x.size)})`:""} × ${x.qty}</span><b>${money(x.price*x.qty)}</b></div>`).join("")+`<h3>Нийт: ${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</h3>`
     : `<p>Сагс хоосон байна.</p>`;
 }
-function openCart(){$("cart").classList.remove("hidden");renderCart();updateCheckoutMode()} function closeCart(){$("cart").classList.add("hidden")}
+function openCart(){$("cart").classList.remove("hidden");renderCart();updateCheckoutMode();if(typeof prefillCheckout==="function")prefillCheckout()} function closeCart(){$("cart").classList.add("hidden")}
 
 /* ---------------- Checkout mode by product category ----------------
    mn_belen  → already in Mongolia: direct delivery (7,000₮), no cargo
@@ -1028,3 +1030,71 @@ async function applyBulkStatus(){
     adminTab("orders");
   }catch(e){ alert(e.message); }
 }
+
+
+/* ---------------- Customer login ---------------- */
+let authModeNow="login";
+function openAuth(){
+  $("authModal").classList.remove("hidden");
+  refreshAuthUi();
+}
+function closeAuth(){ $("authModal").classList.add("hidden"); }
+function authMode(m){
+  authModeNow=m;
+  $("tabLogin").classList.toggle("active",m==="login");
+  $("tabRegister").classList.toggle("active",m==="register");
+  $("authName").classList.toggle("hidden",m!=="register");
+  $("authSubmit").textContent=m==="login"?"Нэвтрэх":"Бүртгүүлэх";
+  $("authTitle").textContent=m==="login"?"Нэвтрэх":"Бүртгүүлэх";
+  $("authPass").autocomplete=m==="login"?"current-password":"new-password";
+}
+function refreshAuthUi(){
+  const on=!!(userToken&&user);
+  $("authLoggedOut").classList.toggle("hidden",on);
+  $("authLoggedIn").classList.toggle("hidden",!on);
+  if(on){
+    $("authTitle").textContent="Миний бүртгэл";
+    $("authUserName").textContent=user.name||user.phone;
+    $("authUserPhone").textContent=user.phone;
+  } else authMode(authModeNow);
+  const b=$("userBtn"); if(b) b.classList.toggle("logged-in",on);
+}
+async function submitAuth(){
+  const phone=$("authPhone").value.trim(), password=$("authPass").value, name=$("authName").value.trim();
+  if(!phone||!password) return alert("Утас, нууц үгээ оруулна уу.");
+  try{
+    const d=await api(authModeNow==="login"?"/api/auth/login":"/api/auth/register",{method:"POST",body:JSON.stringify({phone,password,name})});
+    userToken=d.token; user={phone:d.phone,name:d.name||""};
+    try{ localStorage.setItem("moode_user_token",userToken); localStorage.setItem("moode_user",JSON.stringify(user)); }catch(_){}
+    $("authPass").value="";
+    refreshAuthUi();
+    closeAuth();
+    showMyOrders(true);
+  }catch(e){ alert(e.message); }
+}
+function logoutUser(){
+  userToken=""; user=null;
+  try{ localStorage.removeItem("moode_user_token"); localStorage.removeItem("moode_user"); }catch(_){}
+  myOrders=[]; $("ordersSection").classList.add("hidden");
+  refreshAuthUi(); closeAuth();
+}
+async function showMyOrders(scroll){
+  if(!userToken) return;
+  try{
+    const r=await fetch("/api/me",{headers:{Authorization:"Bearer "+userToken}});
+    if(r.status===401){ logoutUser(); return; }
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||"Алдаа");
+    if(d.name && user && d.name!==user.name){ user.name=d.name; try{localStorage.setItem("moode_user",JSON.stringify(user));}catch(_){} }
+    myOrders=d.orders||[];
+    $("ordersSection").classList.remove("hidden");
+    $("orders").innerHTML=myOrders.length?myOrders.map((o,i)=>orderCard(o,i)).join(""):`<div class="admin-card">Одоогоор захиалга алга байна.</div>`;
+    if(scroll) $("ordersSection").scrollIntoView({behavior:"smooth"});
+  }catch(e){ if(scroll) alert(e.message); }
+}
+function prefillCheckout(){
+  if(!user) return;
+  if($("customerName") && !$("customerName").value) $("customerName").value=user.name||"";
+  if($("customerPhone") && !$("customerPhone").value) $("customerPhone").value=user.phone||"";
+}
+refreshAuthUi(); if(userToken) showMyOrders(false);
