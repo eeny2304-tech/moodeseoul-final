@@ -27,7 +27,7 @@
 <header class="top">
   <img class="logo" src="/IMG_8588.jpeg" alt="MOODE SEOUL" onerror="this.outerHTML='&lt;div class=&quot;logo logo-fallback&quot;&gt;MS&lt;/div&gt;'">
   <div class="brand"><b id="brandName">MOODE SEOUL</b><span>🇰🇷 → 🇲🇳</span></div>
-  <button class="icon user-btn" id="userBtn" onclick="openAuth()" title="Нэвтрэх">👤</button>
+  <button class="login-pill" id="userBtn" onclick="openAuth()"><span class="lp-ico">👤</span><span id="userBtnLabel">Нэвтрэх</span></button>
   <button class="icon" onclick="openAdmin()">☰</button>
 </header>
 <div class="announce" id="announce"></div>
@@ -65,6 +65,11 @@
     <button class="brand-tab" data-brand="other" onclick="setBrand(this)">Бусад</button>
   </div>
   <div id="products" class="grid"></div>
+</section>
+
+<section class="login-cta" id="loginCta">
+  <div><b>Бүртгэл үүсгэж нэвтэрвэл</b><span>захиалгаа нэг дор хянаж, дараагийн захиалгад нэр утсаа дахин бичихгүй.</span></div>
+  <button class="primary" onclick="openAuth()">Нэвтрэх / Бүртгүүлэх</button>
 </section>
 
 <section class="track track-accent">
@@ -228,7 +233,10 @@
 
 <div id="cart" class="drawer hidden">
   <div class="drawer-head"><h2>Сагс</h2><button onclick="closeCart()">×</button></div>
+  <p class="step-title"><span>1</span> Таны сонгосон бараа</p>
   <div id="cartItems"></div>
+
+  <p class="step-title"><span>2</span> Хүлээн авах мэдээлэл</p>
 
   <div id="receiveChoice" class="hidden">
     <p class="field-label">Барааг хаанаас авах вэ?</p>
@@ -241,7 +249,7 @@
   <div id="cargoBlock">
     <div class="cargo-note">
       <b>🚚 Express газрын карго</b>
-      <p>⏰ 10-12 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
+      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
     </div>
   </div>
 
@@ -254,6 +262,8 @@
   <input id="customerPhone" placeholder="Утасны дугаар">
   <input id="customerAddress" placeholder="Хүлээн авах хаяг (дүүрэг, хороо, байр, тоот)">
 
+  <p class="step-title"><span>3</span> Төлбөр</p>
+  <p class="muted-note">Захиалга баталгаажсны дараа данс болон төлбөрийн заавар гарна. Гүйлгээний баримтаа энд хавсаргаж болно.</p>
   <label class="file-btn receipt-btn">🧾 Гүйлгээний баримт хавсаргах (заавал биш)
     <input type="file" id="receiptFile" accept="image/*" onchange="uploadReceipt(this)">
   </label>
@@ -325,7 +335,7 @@
       <input id="authPhone" type="tel" inputmode="tel" placeholder="Утасны дугаар" autocomplete="tel">
       <input id="authPass" type="password" placeholder="Нууц үг (6+ тэмдэгт)" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
       <button class="primary" id="authSubmit" onclick="submitAuth()">Нэвтрэх</button>
-      <p class="muted-note">Өмнө захиалга өгч байсан бол тэр утасны дугаараараа бүртгүүлж, захиалгуудаа шууд харна.</p>
+      <p class="muted-note">Шинэ бол "Бүртгүүлэх" дээр дараад утас, нууц үгээ сонгоно. Өмнө захиалга өгч байсан бол тэр утасны дугаараараа бүртгүүлж, захиалгуудаа шууд харна.</p>
     </div>
     <div id="authLoggedIn" class="hidden">
       <p class="auth-hello">Сайн байна уу, <b id="authUserName"></b></p>
