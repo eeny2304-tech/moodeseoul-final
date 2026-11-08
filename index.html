@@ -27,6 +27,7 @@
 <header class="top">
   <img class="logo" src="/IMG_8588.jpeg" alt="MOODE SEOUL" onerror="this.outerHTML='&lt;div class=&quot;logo logo-fallback&quot;&gt;MS&lt;/div&gt;'">
   <div class="brand"><b id="brandName">MOODE SEOUL</b><span>🇰🇷 → 🇲🇳</span></div>
+  <button class="icon user-btn" id="userBtn" onclick="openAuth()" title="Нэвтрэх">👤</button>
   <button class="icon" onclick="openAdmin()">☰</button>
 </header>
 <div class="announce" id="announce"></div>
@@ -309,6 +310,29 @@
     <h3 class="section-sub">Эсвэл Excel файлаар</h3>
     <label class="file-btn">📥 Excel-ээс импортлох (FB захиалгууд)<input type="file" id="importFile" accept=".xlsx,.xls" onchange="importOrders(this)"></label>
     <p class="muted-note">Толгой мөр шаардлагагүй. Баганы дараалал: Утас → Нэр → Бараа → (хоосон) → Үнэ → Карго → Карго код → Хаяг. Хуучин дараалал (Нэр → Утас → Бараа → Хэмжээ → Үнэ) мөн танигдана.</p>
+  </div>
+</div>
+
+<div id="authModal" class="modal hidden">
+  <div class="admin-box auth-box">
+    <div class="drawer-head"><h2 id="authTitle">Нэвтрэх</h2><button onclick="closeAuth()">×</button></div>
+    <div id="authLoggedOut">
+      <div class="auth-tabs">
+        <button id="tabLogin" class="active" onclick="authMode('login')">Нэвтрэх</button>
+        <button id="tabRegister" onclick="authMode('register')">Бүртгүүлэх</button>
+      </div>
+      <input id="authName" class="hidden" placeholder="Нэр">
+      <input id="authPhone" type="tel" inputmode="tel" placeholder="Утасны дугаар" autocomplete="tel">
+      <input id="authPass" type="password" placeholder="Нууц үг (6+ тэмдэгт)" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
+      <button class="primary" id="authSubmit" onclick="submitAuth()">Нэвтрэх</button>
+      <p class="muted-note">Өмнө захиалга өгч байсан бол тэр утасны дугаараараа бүртгүүлж, захиалгуудаа шууд харна.</p>
+    </div>
+    <div id="authLoggedIn" class="hidden">
+      <p class="auth-hello">Сайн байна уу, <b id="authUserName"></b></p>
+      <p class="muted-note" id="authUserPhone"></p>
+      <button class="primary" onclick="closeAuth();showMyOrders(true)">Миний захиалгууд</button>
+      <button onclick="logoutUser()">Гарах</button>
+    </div>
   </div>
 </div>
 
