@@ -122,6 +122,7 @@ function checkoutMode(){
 
 function updateCheckoutMode(){
   if(!$("cart")) return;
+  setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   const cats = cartCategories();
   const showChoice = cats.includes("kr_belen") && !cats.every(c=>c==="mn_belen");
   $("receiveChoice").classList.toggle("hidden", !showChoice);
@@ -1236,14 +1237,29 @@ function copyBtn(v,label){ return `<button type="button" class="copy-btn" onclic
 function renderPayBlock(){
   const el=$("payBlock"); if(!el) return;
   if(!cart.length){ el.innerHTML=""; return; }
-  fixAcct(); const acct=settings.bankAccount||"";
   const phone=($("customerPhone")?.value||"").trim();
+  const memo=`<div class="pay-row memo"><span>Гүйлгээний утга</span><b>${phone?esc(phone):"Таны утасны дугаар"}</b>${phone?copyBtn(phone):""}</div>
+    <div class="pay-warn">⚠️ Гүйлгээний утга дээр <b>утасны дугаараа заавал</b> бичнэ үү!</div>`;
+  if(checkoutMode()==="kr_direct"){
+    const acct="1002861393082";
+    const allKrw=cart.every(x=>Number(x.price_krw)>0);
+    const krw=cart.reduce((s,x)=>s+(Number(x.price_krw)||0)*x.qty,0)+4500;
+    el.innerHTML=`<div class="pay-card">
+      <div class="pay-bank">💳 우리 банк (Солонгос данс ₩)</div>
+      <div class="pay-row"><span>Данс</span><b class="acct-num">${acct}</b>${copyBtn(acct)}</div>
+      <div class="pay-row"><span>Хүлээн авагч</span><b>Ganbold ENKHTSATSRALT</b></div>
+      ${allKrw?`<div class="pay-row"><span>Дүн</span><b class="pay-amt">${won(krw)}</b>${copyBtn(krw)}</div>`:""}
+      <div class="pay-warn">🚚 Барааны үнэ дээр нэмээд <b>тээврийн 4,500₩</b> нэмж шилжүүлнэ үү${allKrw?" (дүнд орсон)":""}.</div>
+      ${memo}
+    </div>`;
+    return;
+  }
+  const acct=settings.bankAccount||"";
   el.innerHTML=`<div class="pay-card">
     <div class="pay-bank">${esc(settings.bankName||"Банк")}</div>
-    <div class="pay-row"><span>Данс</span><b>${esc(acct||"—")}</b>${acct?copyBtn(acct):""}</div>
+    <div class="pay-row"><span>Данс</span><b class="acct-num">${esc(acct||"—")}</b>${acct?copyBtn(acct):""}</div>
     <div class="pay-row"><span>Хүлээн авагч</span><b>${esc(settings.bankHolder||"—")}</b></div>
     <div class="pay-row"><span>Дүн</span><b class="pay-amt">${money(payAmount())}</b>${copyBtn(payAmount())}</div>
-    <div class="pay-row memo"><span>Гүйлгээний утга</span><b>${phone?esc(phone):"Таны утасны дугаар"}</b>${phone?copyBtn(phone):""}</div>
-    <div class="pay-warn">⚠️ Гүйлгээний утга дээр <b>утасны дугаараа заавал</b> бичнэ үү!</div>
+    ${memo}
   </div>`;
 }
