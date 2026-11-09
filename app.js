@@ -1,4 +1,4 @@
-let products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
+let editingProductId=null, products=[], cart=[], adminToken=localStorage.getItem("moode_admin_token")||"", settings={};
 
 // Keep the cart across page reloads.
 const CART_KEY = "moode_cart";
@@ -417,6 +417,8 @@ function fallbackCopy(value, done){
 }
 
 let activeBrand = "";
+let activeType = "ready";
+function setType(btn){ activeType=btn.dataset.type; document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b===btn)); filterProducts(); }
 
 function setBrand(btn){
   document.querySelectorAll(".brand-tab").forEach(b=>b.classList.remove("active"));
@@ -431,7 +433,7 @@ function productSection(title,sub,list){
 }
 function filterProducts(){
   const q=($("productSearch")?.value||"").trim().toLowerCase();
-  let filtered = products;
+  let filtered = products.filter(p=>activeType==="order"?p.category==="order":p.category!=="order");
   if(q) filtered = filtered.filter(p=>(p.name||"").toLowerCase().includes(q));
   if(activeBrand){
     filtered = activeBrand === "other"
@@ -439,20 +441,25 @@ function filterProducts(){
       : filtered.filter(p=>p.brand === activeBrand);
   }
   const el=$("products");
-  if(!filtered.length){ el.innerHTML=`<div class="admin-card">Хайлтад тохирох бараа олдсонгүй.</div>`; return; }
+  if(!filtered.length){ el.innerHTML=`<div class="admin-card">${(q||activeBrand)?"Хайлтад тохирох бараа олдсонгүй.":(activeType==="order"?"Захиалгаар авах бараа одоогоор алга.":"Бэлэн бараа одоогоор алга.")}</div>`; return; }
   if(q || activeBrand){
     el.innerHTML=`<div class="grid wrap">${filtered.map(productCardHtml).join("")}</div>`;
     return;
   }
   const inStock=p=>(Array.isArray(p.sizes)&&p.sizes.length?p.sizes.reduce((s,z)=>s+(Number(z.qty)||0),0):Number(p.stock||0))>0;
   const by=c=>filtered.filter(p=>p.category===c);
-  const known=["mn_belen","kr_belen","order"];
+  if(activeType==="order"){
+    el.innerHTML=productSection("✈️ Солонгосоос захиалгаар","12-14 хоногт Монголд ирнэ",by("order"))
+      || `<div class="admin-card">Захиалгаар авах бараа одоогоор алга.</div>`;
+    return;
+  }
+  const ready=filtered.filter(p=>p.category!=="order");
   el.innerHTML=
-    productSection("🔥 Өнөөдрийн онцлох","Хамгийн их үзэлттэй бараа",filtered.filter(p=>p.featured&&inStock(p)))+
+    productSection("🔥 Өнөөдрийн онцлох","Хамгийн их үзэлттэй бараа",ready.filter(p=>p.featured&&inStock(p)))+
     productSection("🇲🇳 Монголд бэлэн — шууд аваарай","Хүргэлт 7,000₮",by("mn_belen"))+
     productSection("🇰🇷 Солонгост бэлэн","Солонгост хүлээн авах эсвэл Монголд авах",by("kr_belen"))+
-    productSection("✈️ Солонгосоос захиалах","12-14 хоногт Монголд ирнэ",by("order"))+
-    productSection("Бусад","",filtered.filter(p=>!known.includes(p.category)));
+    productSection("Бусад","",ready.filter(p=>!["mn_belen","kr_belen"].includes(p.category)))
+    || `<div class="admin-card">Бэлэн бараа одоогоор алга.</div>`;
 }
 
 async function trackOrders(){
@@ -1029,7 +1036,9 @@ async function importOrders(input){
 async function addProduct(){
   const sizes = collectSizeRows();
   const stock = sizes.length ? sizes.reduce((s,x)=>s+x.qty,0) : Number($("pst").value)||0;
-  await api("/api/admin/products",{method:"POST",body:JSON.stringify({
+  const url="/api/admin/products", method="POST";
+  if(!$("pn").value.trim()) return alert("Барааны нэр оруулна уу.");
+  try{ await api(url,{method,body:JSON.stringify({
     name:$("pn").value,
     price:$("pp").value,
     price_krw:$("pkrw").value,
@@ -1044,44 +1053,66 @@ async function addProduct(){
     featured:$("pfeat").checked,
     description:$("pd").value,
     sizes
-  })});
-  pendingImages=[];
+  })}); }catch(e){ return alert(e.message); }
+  pendingImages=[]; editingProductId=null;
   adminTab("products");
   loadProducts();
 }
-async function editProduct(id){
-  const p=(await api("/api/admin/products")).find(x=>x.id==id); if(!p)return;
-  const name=prompt("Барааны нэр",p.name); if(name===null)return;
-  const price=prompt("Үнэ",p.price);
-  const image=prompt("Зураг URL",p.image||"");
-
-  let sizes=p.sizes||[];
-  if(sizes.length){
-    const newSizes=[];
-    for(const s of sizes){
-      const qty=prompt(`"${s.size}" хэмжээний шинэ тоо ширхэг`, s.qty);
-      if(qty===null) return; // cancelled — abort without saving
-      newSizes.push({size:s.size, qty:Number(qty)||0});
-    }
-    const addMore=confirm("Шинэ хэмжээ нэмэх үү?");
-    if(addMore){
-      let addingMore=true;
-      while(addingMore){
-        const sizeName=prompt("Шинэ хэмжээ (жиш: 43)");
-        if(!sizeName) break;
-        const qty=prompt(`"${sizeName}" хэмжээний тоо ширхэг`,"0");
-        newSizes.push({size:sizeName, qty:Number(qty)||0});
-        addingMore=confirm("Дахин нэг хэмжээ нэмэх үү?");
-      }
-    }
-    sizes=newSizes;
-    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,sizes,brand:p.brand||""})});
-  } else {
-    const stock=prompt("Тоо ширхэг",p.stock);
-    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,name,price,image,stock,sizes:[],brand:p.brand||""})});
-  }
-  adminTab("products"); loadProducts();
+let editImages=[];
+function openEditProduct(id){
+  const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
+  editingProductId=id;
+  const set=(k,v)=>{ $("e_"+k).value=v??""; };
+  set("name",p.name); set("price",p.price); set("krw",p.price_krw||""); set("old",Number(p.old_price)>0?p.old_price:"");
+  set("cat",p.category||"order"); set("brand",p.brand||""); set("pickup",p.pickup||""); set("desc",p.description||"");
+  $("e_cargo").checked=!!p.cargo_included; $("e_feat").checked=!!p.featured;
+  $("e_sizes").innerHTML="";
+  const sz=Array.isArray(p.sizes)?p.sizes:[];
+  sz.forEach(s=>addEditSizeRow(s.size,s.qty));
+  set("stock",sz.length?"":(p.stock||""));
+  editImages=(Array.isArray(p.images)&&p.images.length?p.images:(p.image?[p.image]:[])).slice(0,6);
+  renderEditImages();
+  $("e_title").textContent="✏️ "+(p.name||"Бараа засах");
+  $("editProductModal").classList.remove("hidden");
 }
+function closeEditProduct(){ editingProductId=null; $("editProductModal").classList.add("hidden"); }
+function addEditSizeRow(size="",qty=""){
+  const row=document.createElement("div");
+  row.className="admin-row size-row";
+  row.innerHTML=`<input placeholder="Хэмжээ" class="size-size" value="${esc(size)}"><input type="number" placeholder="Тоо" class="size-qty" value="${esc(qty)}"><button type="button" class="size-remove" onclick="this.parentElement.remove()">✕</button>`;
+  $("e_sizes").appendChild(row);
+}
+function renderEditImages(){
+  $("e_preview").innerHTML=editImages.map((u,i)=>
+    `<div class="thumb-wrap"><img src="${u}"><button type="button" class="thumb-x" onclick="editImages.splice(${i},1);renderEditImages()">×</button>${i===0?'<span class="thumb-main">үндсэн</span>':''}</div>`).join("");
+}
+async function uploadEditImages(input){
+  const files=[...input.files].slice(0,6); if(!files.length) return;
+  const fd=new FormData(); files.forEach(f=>fd.append("images",f));
+  const btn=input.closest(".file-btn"); if(btn) btn.classList.add("uploading");
+  try{
+    const r=await fetch("/api/admin/upload-many",{method:"POST",headers:{Authorization:"Bearer "+adminToken},body:fd});
+    const d=await r.json(); if(!r.ok) throw Error(d.error||"Зураг оруулахад алдаа гарлаа");
+    editImages=[...editImages,...d.urls].slice(0,6); renderEditImages();
+  }catch(e){alert(e.message)} finally{ if(btn) btn.classList.remove("uploading"); input.value=""; }
+}
+async function saveEditProduct(){
+  if(!editingProductId) return;
+  const name=$("e_name").value.trim(); if(!name) return alert("Барааны нэр оруулна уу.");
+  const sizes=[...document.querySelectorAll("#e_sizes .size-row")]
+    .map(r=>({size:r.querySelector(".size-size").value.trim(),qty:Number(r.querySelector(".size-qty").value)||0})).filter(s=>s.size);
+  const stock=sizes.length?sizes.reduce((s,x)=>s+x.qty,0):Number($("e_stock").value)||0;
+  const orig=(window.__allProducts||[]).find(x=>x.id==editingProductId)||{};
+  try{
+    await api("/api/admin/products/"+editingProductId,{method:"PUT",body:JSON.stringify({...orig,
+      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:$("e_old").value,
+      category:$("e_cat").value,brand:$("e_brand").value,pickup:$("e_pickup").value,description:$("e_desc").value,
+      cargo_included:$("e_cargo").checked,featured:$("e_feat").checked,
+      image:editImages[0]||"",images:editImages,sizes,stock})});
+  }catch(e){ return alert(e.message); }
+  closeEditProduct(); adminTab("products"); loadProducts();
+}
+function editProduct(id){ openEditProduct(id); }
 async function deleteProduct(id){if(!confirm("Устгах уу?"))return;await api("/api/admin/products/"+id,{method:"DELETE"});adminTab("products");loadProducts()}
 async function saveOrder(id){await api("/api/admin/orders/"+id,{method:"PUT",body:JSON.stringify({status:$("st"+id).value,paid:$("paid"+id).value,cargo_code:$("cargo"+id).value,address:$("addr"+id).value})});alert("Захиалга шинэчлэгдлээ");adminTab("orders")}
 async function saveSettings(){await api("/api/admin/settings",{method:"PUT",body:JSON.stringify({storeName:$("sn").value,phone:$("sphone").value,groundCargo:$("ground").value,bankName:$("bank").value,bankAccount:$("acct").value,bankHolder:$("holder").value,instagram:$("ig").value,facebook:$("fb").value,announcement:$("ann").value})});alert("Хадгалагдлаа");init()}
