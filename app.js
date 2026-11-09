@@ -89,6 +89,7 @@ function addCart(id){
 
 function renderCart(){
   saveCart();
+  setTimeout(()=>{ if(typeof updateCheckoutMode==="function") updateCheckoutMode(); },0);
   $("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);
   const thumb=x=>{const im=(Array.isArray(x.images)&&x.images[0])||x.image||"";return im?`<img class="ci-img" src="${im}" alt="">`:`<div class="ci-img ci-ph"></div>`;};
   setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
@@ -131,6 +132,14 @@ function updateCheckoutMode(){
   const isCargo = mode === "cargo";
 
   $("cargoBlock").classList.toggle("hidden", !isCargo);
+  const cbox=$("cargoBlock").querySelector(".cargo-note");
+  if(cbox){
+    if(cbox.dataset.std===undefined) cbox.dataset.std=cbox.innerHTML;
+    const included=cart.length>0 && cart.every(x=>x.cargo_included);
+    cbox.innerHTML = included
+      ? `<b>🚗 Express газрын карго</b><p>📅 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө.)<br>🏠 Гэр хүргэлт + 9,000₮</p>`
+      : cbox.dataset.std;
+  }
 
   $("customerAddress").classList.remove("hidden");
   $("deliveryNote").classList.toggle("hidden", mode !== "mn_direct");
