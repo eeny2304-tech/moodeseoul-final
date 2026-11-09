@@ -48,7 +48,7 @@
     <p>Outlet-ээс хамгийн боломжийн үнээр таны хүссэн брэндийг шууд хүргэнэ. 🇰🇷✈️🇲🇳</p>
   </div>
   <div class="hero-social">
-    <a class="soc-btn soc-btn-fb" href="https://www.facebook.com/share/1CKXjZaedR/?mibextid=wwXIfr">
+    <a class="soc-btn soc-btn-fb" href="https://www.facebook.com/share/1DfrwygWEK/?mibextid=wwXIfr">
       <span class="soc-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M15 8.5h2.2V5.6c-.38-.05-1.7-.16-3.24-.16-3.2 0-5.4 2-5.4 5.7v2.8H5.2v3.4h3.36V22h3.5v-4.66h3.24l.5-3.4h-3.74v-2.4c0-.98.27-1.66 1.94-1.66Z" fill="#1877F2"/></svg></span>
       <span class="soc-name">Moode Seoul</span>
     </a>
@@ -69,12 +69,12 @@
   <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
   <div class="brand-tabs" id="brandTabs">
     <button class="brand-tab active" data-brand="" onclick="setBrand(this)">Бүгд</button>
-    <button class="brand-tab" data-brand="nike" onclick="setBrand(this)">Nike</button>
-    <button class="brand-tab" data-brand="adidas" onclick="setBrand(this)">Adidas</button>
-    <button class="brand-tab" data-brand="under_armour" onclick="setBrand(this)">Under Armour</button>
-    <button class="brand-tab" data-brand="olive_young" onclick="setBrand(this)">Olive Young</button>
-    <button class="brand-tab" data-brand="other" onclick="setBrand(this)">Бусад</button>
+    <button class="brand-tab" data-brand="outlet_clothes" data-hint="Nike, Adidas гэх мэт" onclick="setBrand(this)">👕 Outlet хувцас</button>
+    <button class="brand-tab" data-brand="outlet_shoes" data-hint="Nike, Adidas, Under Armour гэх мэт" onclick="setBrand(this)">👟 Outlet гутал</button>
+    <button class="brand-tab" data-brand="costco" onclick="setBrand(this)">🛒 Costco</button>
+    <button class="brand-tab" data-brand="olive_young" onclick="setBrand(this)">💄 Olive Young</button>
   </div>
+  <p class="brand-hint hidden" id="brandHint"></p>
   <div id="products"></div>
 </section>
 
@@ -97,7 +97,7 @@
     <li><span class="sn">2</span><div><b>Захиалгаа илгээж, төлбөрөө төлнө</b><p>Нэр, утас, хаяг оруулаад барааны төлбөрөө шилжүүлж, баримтаа хавсаргана.</p></div></li>
     <li><span class="sn">3</span><div><b>Каргонд өгнө</b><p>Мягмар, Баасан гаригт. Каргоны код өгнө.</p></div></li>
     <li><span class="sn">4</span><div><b>Монголд буусны дараа карго төлнө</b><p>Хүргэлтэнд гарахын өмнө каргоны төлбөрөө шилжүүлж, тооцоогоо дуусгана.</p></div></li>
-    <li><span class="sn">5</span><div><b>Гэрт чинь хүргэнэ</b><p>Тооцоо дууссаны дараа хүргэлтэнд гарна.</p></div></li>
+    <li><span class="sn">5</span><div><b>Гэрт тань хүргэнэ</b><p>Тооцоо дууссаны дараа хүргэлтэнд гарна.</p></div></li>
   </ol>
 </section>
 
@@ -165,7 +165,7 @@
       <label>Үнэ ₩<input id="e_krw" type="number"></label>
       <label>Хуучин үнэ ₮ (хямдрал)<input id="e_old" type="number"></label>
       <label>Ангилал<select id="e_cat"><option value="mn_belen">Монголд бэлэн</option><option value="kr_belen">Солонгост бэлэн</option><option value="order">Захиалгийн бараа</option></select></label>
-      <label>Брэнд<select id="e_brand"><option value="">—</option><option value="nike">Nike</option><option value="adidas">Adidas</option><option value="under_armour">Under Armour</option><option value="olive_young">Olive Young</option></select></label>
+      <label>Төрөл<select id="e_brand"><option value="">Төрөл сонгох</option><option value="outlet_clothes">Outlet хувцас</option><option value="outlet_shoes">Outlet гутал</option><option value="costco">Costco</option><option value="olive_young">Olive Young</option></select></label>
     </div>
     <label class="edit-full">📍 Авах цэг<input id="e_pickup"></label>
     <label class="check-row"><input type="checkbox" id="e_cargo"> Карго орсон</label>
@@ -184,12 +184,10 @@
 <div id="welcomeModal" class="modal hidden" onclick="if(event.target===this)closeWelcome()">
   <div class="welcome-box">
     <img class="welcome-logo" src="/IMG_8588.jpeg" alt="MOODE SEOUL" onerror="this.style.display='none'">
-    <h2>Сайн байна уу! 👋</h2>
-    <p class="welcome-sub">Юу хийхээ сонгоно уу</p>
+    <h2>Сайн байна уу? <span class="wb">MOODE SEOUL</span> 👋</h2>
     <button class="welcome-opt main" onclick="welcomeGo('track')"><span class="wi">📦</span><span><b>Захиалгаа шалгах</b><small>Захиалсан бараагаа хянах</small></span><i>›</i></button>
-    <div class="welcome-or"><span>эсвэл дэлгүүр хэсэх</span></div>
-    <button class="welcome-opt" onclick="welcomeGo('order')"><span class="wi">🇰🇷</span><span><b>Солонгосоос захиалах</b><small>Хүссэн бараагаа захиалаад Монголд хүлээн авна</small></span><i>›</i></button>
-    <button class="welcome-opt" onclick="welcomeGo('kr')"><span class="wi">🚚</span><span><b>Солонгост тэгбэгээр авах</b><small>Солонгост байгаа хүмүүст · 택배</small></span><i>›</i></button>
+    <button class="welcome-opt" onclick="welcomeGo('order')"><span class="wi">🇲🇳</span><span><b>Солонгосоос Монголд захиалах</b><small>Хүссэн бараагаа захиалаад Монголд хүлээн авна</small></span><i>›</i></button>
+    <button class="welcome-opt" onclick="welcomeGo('kr')"><span class="wi">🇰🇷</span><span><b>Солонгост захиалах</b><small>Солонгост байгаа хүмүүс маань тэгбэгээр (택배) хүлээн авах боломжтой</small></span><i>›</i></button>
     <a href="#" class="welcome-skip" onclick="closeWelcome();return false;">Зүгээр үзэх</a>
   </div>
 </div>
@@ -309,7 +307,7 @@
   </div>
 </div>
 
-<a class="chat-fab" href="https://www.facebook.com/share/1CKXjZaedR/?mibextid=wwXIfr" aria-label="Мессеж бичих">
+<a class="chat-fab" href="https://www.facebook.com/share/1DfrwygWEK/?mibextid=wwXIfr" aria-label="Мессеж бичих">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 2C6.3 2 2 6.2 2 11.6c0 3 1.4 5.7 3.7 7.4v3.6l3.4-1.9c.9.25 1.9.4 2.9.4 5.7 0 10-4.2 10-9.5S17.7 2 12 2Zm1 12.3-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7Z"/></svg>
 </a>
 <button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
@@ -336,7 +334,7 @@
     <div id="contactBlock">
       <b>ХОЛБОО БАРИХ</b>
       <a href="tel:+9767288-3815">📞 <span id="footerPhone">(976) 7288-3815</span></a>
-      <a href="https://www.facebook.com/share/1CKXjZaedR/?mibextid=wwXIfr">📘 Facebook · Moode Seoul</a>
+      <a href="https://www.facebook.com/share/1DfrwygWEK/?mibextid=wwXIfr">📘 Facebook · Moode Seoul</a>
       <a href="https://www.instagram.com/moode_seoul?igsi=dWx5MDNxdzdxcHcz&utm_source=qr">📷 Instagram · moode_seoul</a>
     </div>
   </div>
