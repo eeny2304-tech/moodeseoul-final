@@ -20,8 +20,8 @@ async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Conte
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 const CARGO_LABELS = {
-  ground: "🚚 Express газрын карго 12-14 хоног",
-  delivery: "🛵 Монголд хүргэлт (9,000₮)",
+  ground: "🚚 Express газрын карго 10-12 хоног",
+  delivery: "🛵 Монголд хүргэлт (7,000₮)",
   pickup_kr: "🇰🇷 Солонгост хүлээн авна"
 };
 function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
@@ -31,6 +31,11 @@ async function init(){const s=await api("/api/settings");settings=s;$("brandName
 
 /* ---------------- Storefront products ---------------- */
 
+function salePct(p){ const o=Number(p.old_price)||0, n=Number(p.price)||0; return o>n&&n>0?Math.round((1-n/o)*100):0; }
+function priceHtml(p){
+  const o=Number(p.old_price)||0;
+  return `<b>${money(p.price)}</b>${p.cargo_included?` <span class="cargo-in">(Карго орсон)</span>`:""}${salePct(p)?` <s class="old-price">${money(o)}</s>`:""}`;
+}
 function productCardHtml(p){
   const sizes = Array.isArray(p.sizes) ? p.sizes : [];
   const hasSizes = sizes.length > 0;
@@ -46,12 +51,13 @@ function productCardHtml(p){
     <div class="product-media" onclick="openProductModal(${p.id})">
       <img src="${cover}">
       ${imgs.length>1?`<span class="img-count">📷 ${imgs.length}</span>`:""}
+      ${salePct(p)?`<span class="sale-badge">−${salePct(p)}%</span>`:""}
       ${badge}
     </div>
     <div class="p">
       ${catLabel?`<span class="cat-badge cat-${esc(p.category)}">${catLabel}</span>`:""}
       <h3 onclick="openProductModal(${p.id})">${esc(p.name)}</h3>
-      <div class="price">${money(p.price)}</div>
+      <div class="price">${priceHtml(p)}</div>
       ${Number(p.price_krw)>0?`<div class="price-krw">${won(p.price_krw)}</div>`:""}
       ${sizeChips}
       <button class="add-btn" ${totalStock<=0?"disabled":""} onclick="addCart(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
@@ -62,7 +68,8 @@ function productCardHtml(p){
 
 async function loadProducts(){
   products=await api("/api/products");
-  $("products").innerHTML = products.length ? products.map(productCardHtml).join("") : `<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`;
+  if(!products.length) $("products").innerHTML=`<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`;
+  else filterProducts();
   openProductFromUrl();
 }
 
@@ -83,6 +90,7 @@ function renderCart(){
   saveCart();
   $("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);
   const thumb=x=>{const im=(Array.isArray(x.images)&&x.images[0])||x.image||"";return im?`<img class="ci-img" src="${im}" alt="">`:`<div class="ci-img ci-ph"></div>`;};
+  setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   $("cartItems").innerHTML=cart.length
     ? cart.map((x,i)=>`<div class="cart-item">${thumb(x)}<div class="ci-info"><b>${esc(x.name)}</b>${x.size?`<span>Размер: ${esc(x.size)}</span>`:""}<span>${money(x.price)}</span></div><div class="ci-right"><div class="qty"><button type="button" onclick="changeQty(${i},-1)">−</button><span>${x.qty}</span><button type="button" onclick="changeQty(${i},1)">+</button></div><b>${money(x.price*x.qty)}</b><button type="button" class="ci-del" onclick="removeFromCart(${i})">Устгах</button></div></div>`).join("")+`<div class="cart-total"><span>Барааны нийт дүн</span><b>${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</b></div>`
     : `<p class="cart-empty">Сагс хоосон байна.</p>`;
@@ -163,7 +171,7 @@ function openProductModal(id, skipUrl){
   $("pmBody").innerHTML=`
     ${catLabel?`<span class="cat-badge cat-${esc(p.category)}">${catLabel}</span>`:""}
     <div class="pm-price">
-      <b>${money(p.price)}</b>
+      ${priceHtml(p)}${salePct(p)?` <span class="sale-pill">−${salePct(p)}%</span>`:""}
       ${Number(p.price_krw)>0?`<span class="pm-krw">${won(p.price_krw)}</span>`:""}
     </div>
     ${sizes.length?`
@@ -325,6 +333,7 @@ async function submitOrder(){
     }
   }
 
+  if(!$("receiptUrl").value) return alert("Төлбөр шилжүүлсний баримтын зургийг хавсаргана уу.");
   const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
   try{
     const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address,cargo_type,note,receipt:$("receiptUrl").value||"",total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
@@ -411,6 +420,10 @@ function setBrand(btn){
   filterProducts();
 }
 
+function productSection(title,sub,list){
+  if(!list.length) return "";
+  return `<div class="prod-section"><div class="ps-head"><h3>${title}</h3>${sub?`<small>${sub}</small>`:""}</div><div class="grid">${list.map(productCardHtml).join("")}</div></div>`;
+}
 function filterProducts(){
   const q=($("productSearch")?.value||"").trim().toLowerCase();
   let filtered = products;
@@ -420,7 +433,21 @@ function filterProducts(){
       ? filtered.filter(p=>!BRAND_KEYS.includes(p.brand))
       : filtered.filter(p=>p.brand === activeBrand);
   }
-  $("products").innerHTML = filtered.length ? filtered.map(productCardHtml).join("") : `<div class="admin-card">Хайлтад тохирох бараа олдсонгүй.</div>`;
+  const el=$("products");
+  if(!filtered.length){ el.innerHTML=`<div class="admin-card">Хайлтад тохирох бараа олдсонгүй.</div>`; return; }
+  if(q || activeBrand){
+    el.innerHTML=`<div class="grid wrap">${filtered.map(productCardHtml).join("")}</div>`;
+    return;
+  }
+  const inStock=p=>(Array.isArray(p.sizes)&&p.sizes.length?p.sizes.reduce((s,z)=>s+(Number(z.qty)||0),0):Number(p.stock||0))>0;
+  const by=c=>filtered.filter(p=>p.category===c);
+  const known=["mn_belen","kr_belen","order"];
+  el.innerHTML=
+    productSection("🔥 Өнөөдрийн онцлох","Хамгийн их үзэлттэй бараа",filtered.filter(p=>p.featured&&inStock(p)))+
+    productSection("🇲🇳 Монголд бэлэн — шууд аваарай","Хүргэлт 7,000₮",by("mn_belen"))+
+    productSection("🇰🇷 Солонгост бэлэн","Солонгост хүлээн авах эсвэл Монголд авах",by("kr_belen"))+
+    productSection("✈️ Солонгосоос захиалах","10-12 хоногт Монголд ирнэ",by("order"))+
+    productSection("Бусад","",filtered.filter(p=>!known.includes(p.category)));
 }
 
 async function trackOrders(){
@@ -600,6 +627,7 @@ async function adminTab(tab){
             <input id="pn" placeholder="Барааны нэр">
             <input id="pp" type="number" placeholder="Үнэ ₮">
             <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
+            <input id="pold" type="number" placeholder="Хуучин үнэ ₮ (хямдрал харуулах бол)">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
               <option value="kr_belen">Солонгост бэлэн</option>
@@ -614,6 +642,8 @@ async function adminTab(tab){
             </select>
           </div>
           <input id="ppickup" placeholder="📍 Авах цэг (жиш: Улаанбаатар, Драгон карго)">
+          <label class="check-row"><input type="checkbox" id="pcargo"> Каргоны төлбөр үнэд орсон ("Карго орсон")</label>
+          <label class="check-row"><input type="checkbox" id="pfeat"> 🔥 Өнөөдрийн онцлох хэсэгт харуулах</label>
 
           <p class="field-label">Хэмжээ бүрийн тоо ширхэг</p>
           <div id="sizeRows"></div>
@@ -737,7 +767,7 @@ function renderAdminProductsList(ps){
         <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
         <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}${p.brand?" · "+esc(BRAND_LABELS[p.brand]||p.brand):""}</small>
         ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
-        <br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+        <br><span class="tog-row"><button class="tog ${p.featured?"on":""}" onclick="toggleProd(${p.id},'featured')">🔥 Онцлох</button><button class="tog ${p.cargo_included?"on":""}" onclick="toggleProd(${p.id},'cargo_included')">Карго орсон</button><button class="tog ${Number(p.old_price)>0?"on":""}" onclick="setOldPrice(${p.id})">${Number(p.old_price)>0?"Хямдрал −"+salePct(p)+"%":"Хямдрал"}</button></span><br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
       </div>
     </div>`;
   }).join("") : `<p class="muted-note">Бараа олдсонгүй.</p>`;
@@ -1004,6 +1034,9 @@ async function addProduct(){
     image:pendingImages[0]||"",
     images:pendingImages,
     pickup:$("ppickup").value,
+    old_price:$("pold").value,
+    cargo_included:$("pcargo").checked,
+    featured:$("pfeat").checked,
     description:$("pd").value,
     sizes
   })});
@@ -1179,4 +1212,43 @@ async function duplicateProduct(id){
     await api("/api/admin/products",{method:"POST",body:JSON.stringify(copy)});
     adminTab("products");
   }catch(e){ alert(e.message); }
+}
+
+
+async function toggleProd(id,key){
+  const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
+  try{
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,[key]:!p[key]})});
+    adminTab("products"); loadProducts();
+  }catch(e){ alert(e.message); }
+}
+async function setOldPrice(id){
+  const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
+  const v=prompt("Хуучин үнэ ₮ (одоогийн үнэ "+money(p.price)+"). Хямдралыг арилгах бол 0 оруулна.", p.old_price||"");
+  if(v===null) return;
+  try{
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,old_price:Number(v)||0})});
+    adminTab("products"); loadProducts();
+  }catch(e){ alert(e.message); }
+}
+
+/* ---------------- Payment block in cart ---------------- */
+function payAmount(){
+  const items=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  return items + (typeof checkoutMode==="function" && checkoutMode()==="mn_direct" ? 7000 : 0);
+}
+function copyBtn(v,label){ return `<button type="button" class="copy-btn" onclick="copyAccount(event,'${esc(String(v))}')">${label||"Хуулах"}</button>`; }
+function renderPayBlock(){
+  const el=$("payBlock"); if(!el) return;
+  if(!cart.length){ el.innerHTML=""; return; }
+  const acct=settings.bankAccount||"";
+  const phone=($("customerPhone")?.value||"").trim();
+  el.innerHTML=`<div class="pay-card">
+    <div class="pay-bank">${esc(settings.bankName||"Банк")}</div>
+    <div class="pay-row"><span>Данс</span><b>${esc(acct||"—")}</b>${acct?copyBtn(acct):""}</div>
+    <div class="pay-row"><span>Хүлээн авагч</span><b>${esc(settings.bankHolder||"—")}</b></div>
+    <div class="pay-row"><span>Дүн</span><b class="pay-amt">${money(payAmount())}</b>${copyBtn(payAmount())}</div>
+    <div class="pay-row memo"><span>Гүйлгээний утга</span><b>${phone?esc(phone):"Таны утасны дугаар"}</b>${phone?copyBtn(phone):""}</div>
+    <div class="pay-warn">⚠️ Гүйлгээний утга дээр <b>утасны дугаараа заавал</b> бичнэ үү!</div>
+  </div>`;
 }
