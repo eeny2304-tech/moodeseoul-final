@@ -95,6 +95,9 @@ async function dbInit() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS images jsonb DEFAULT '[]';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_krw numeric DEFAULT 0;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS pickup text DEFAULT '';`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price integer DEFAULT 0;`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cargo_included boolean DEFAULT false;`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS featured boolean DEFAULT false;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand text DEFAULT '';`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt text DEFAULT '';`);
   // Images live in the database so they survive redeploys regardless of disk/volume setup.
@@ -212,12 +215,12 @@ async function createProduct(p) {
   const stock = sizes.length ? totalFromSizes(sizes) : (Number(p.stock) || 0);
   if (!usePostgres) {
     const d=loadJson(); const id=(d.products[0]?.id||0)+1;
-    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",active:p.active!==false,sizes};
+    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",old_price:Number(p.old_price)||0,cargo_included:!!p.cargo_included,featured:!!p.featured,active:p.active!==false,sizes};
     d.products.push(item); saveJson(d); return item;
   }
-  return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,brand,image,images,pickup,active,sizes)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes)])).rows[0];
+  return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,brand,image,images,pickup,active,sizes,old_price,cargo_included,featured)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),Number(p.old_price)||0,!!p.cargo_included,!!p.featured])).rows[0];
 }
 async function updateProduct(id,p) {
   const sizes = parseSizes(p.sizes);
@@ -226,11 +229,11 @@ async function updateProduct(id,p) {
   const stock = sizes.length ? totalFromSizes(sizes) : Number(p.stock)||0;
   if (!usePostgres) {
     const d=loadJson(), i=d.products.findIndex(x=>x.id==id); if(i<0) throw Error("Product not found");
-    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",sizes};
+    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",old_price:Number(p.old_price??d.products[i].old_price??0)||0,cargo_included:!!(p.cargo_included??d.products[i].cargo_included),featured:!!(p.featured??d.products[i].featured),sizes};
     saveJson(d); return d.products[i];
   }
-  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,brand=$7,image=$8,images=$9,pickup=$10,active=$11,sizes=$12 WHERE id=$13 RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),id])).rows[0];
+  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,brand=$7,image=$8,images=$9,pickup=$10,active=$11,sizes=$12,old_price=$13,cargo_included=$14,featured=$15 WHERE id=$16 RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),Number(p.old_price)||0,!!p.cargo_included,!!p.featured,id])).rows[0];
 }
 async function deleteProduct(id) {
   if (!usePostgres) { const d=loadJson(); d.products=d.products.filter(x=>x.id!=id); saveJson(d); return; }
@@ -359,7 +362,7 @@ async function autoCancelStaleOrders() {
     const now = Date.now();
     for (const o of orders) {
       if (o.status !== "registered") continue;
-      if (Number(o.paid || 0) > 0) continue;
+      if (Number(o.paid || 0) > 0 || o.receipt) continue;
       const created = new Date(o.created_at).getTime();
       if (isNaN(created)) continue;
       if (now - created > 30 * 60 * 1000) {
