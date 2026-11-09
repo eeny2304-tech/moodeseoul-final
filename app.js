@@ -20,7 +20,7 @@ async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"Conte
 function money(n){return Number(n||0).toLocaleString("mn-MN")+"₮"}
 function won(n){return Number(n||0).toLocaleString("mn-MN")+"₩"}
 const CARGO_LABELS = {
-  ground: "🚚 Express газрын карго 10-12 хоног",
+  ground: "🚚 Express газрын карго 12-14 хоног",
   delivery: "🛵 Монголд хүргэлт (7,000₮)",
   pickup_kr: "🇰🇷 Солонгост хүлээн авна"
 };
@@ -181,7 +181,7 @@ function openProductModal(id, skipUrl){
     ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
     <div class="pm-cargo">
       <b>🚚 Express газрын карго</b>
-      <p>⏰ 10-12 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
+      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
       ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
@@ -446,7 +446,7 @@ function filterProducts(){
     productSection("🔥 Өнөөдрийн онцлох","Хамгийн их үзэлттэй бараа",filtered.filter(p=>p.featured&&inStock(p)))+
     productSection("🇲🇳 Монголд бэлэн — шууд аваарай","Хүргэлт 7,000₮",by("mn_belen"))+
     productSection("🇰🇷 Солонгост бэлэн","Солонгост хүлээн авах эсвэл Монголд авах",by("kr_belen"))+
-    productSection("✈️ Солонгосоос захиалах","10-12 хоногт Монголд ирнэ",by("order"))+
+    productSection("✈️ Солонгосоос захиалах","12-14 хоногт Монголд ирнэ",by("order"))+
     productSection("Бусад","",filtered.filter(p=>!known.includes(p.category)));
 }
 
