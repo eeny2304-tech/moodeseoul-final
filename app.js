@@ -123,6 +123,7 @@ function checkoutMode(){
 
 function updateCheckoutMode(){
   if(!$("cart")) return;
+  const rw=$("receiveWhere"); if(window.__preferKr && rw && !rw.dataset.touched && rw.value!=="kr") rw.value="kr";
   setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   const cats = cartCategories();
   const showChoice = cats.includes("kr_belen") && !cats.every(c=>c==="mn_belen");
@@ -418,6 +419,7 @@ function fallbackCopy(value, done){
 
 let activeBrand = "";
 let activeType = "ready";
+function selectType(t){ activeType=t; document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b.dataset.type===t)); filterProducts(); }
 function setType(btn){ activeType=btn.dataset.type; document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b===btn)); filterProducts(); }
 
 function setBrand(btn){
@@ -427,9 +429,9 @@ function setBrand(btn){
   filterProducts();
 }
 
-function productSection(title,sub,list){
+function productSection(title,sub,list,id){
   if(!list.length) return "";
-  return `<div class="prod-section"><div class="ps-head"><h3>${title}</h3>${sub?`<small>${sub}</small>`:""}</div><div class="grid">${list.map(productCardHtml).join("")}</div></div>`;
+  return `<div class="prod-section"${id?` id="${id}"`:""}><div class="ps-head"><h3>${title}</h3>${sub?`<small>${sub}</small>`:""}</div><div class="grid">${list.map(productCardHtml).join("")}</div></div>`;
 }
 function filterProducts(){
   const q=($("productSearch")?.value||"").trim().toLowerCase();
@@ -457,7 +459,7 @@ function filterProducts(){
   el.innerHTML=
     productSection("🔥 Өнөөдрийн онцлох","Хамгийн их үзэлттэй бараа",ready.filter(p=>p.featured&&inStock(p)))+
     productSection("🇲🇳 Монголд бэлэн — шууд аваарай","Хүргэлт 7,000₮",by("mn_belen"))+
-    productSection("🇰🇷 Солонгост бэлэн","Солонгост хүлээн авах эсвэл Монголд авах",by("kr_belen"))+
+    productSection("🇰🇷 Солонгост бэлэн","Солонгост хүлээн авах эсвэл Монголд авах",by("kr_belen"),"sec-kr")+
     productSection("Бусад","",ready.filter(p=>!["mn_belen","kr_belen"].includes(p.category)))
     || `<div class="admin-card">Бэлэн бараа одоогоор алга.</div>`;
 }
@@ -1303,3 +1305,26 @@ function renderPayBlock(){
     ${memo}
   </div>`;
 }
+
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{})); }
+
+/* ---------------- Welcome popup ---------------- */
+function closeWelcome(){ $("welcomeModal").classList.add("hidden"); }
+function welcomeGo(what){
+  closeWelcome();
+  if(what==="track"){ scrollToMyOrders(); return; }
+  if(what==="order"){ const t=$("typeTabs"); t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); setTimeout(()=>t.classList.remove("pulse"),2600); }
+  if(what==="kr"){ window.__preferKr=true; selectType("ready"); }
+  setTimeout(()=>{
+    const target = what==="kr" ? ($("sec-kr")||$("typeTabs")) : $("typeTabs");
+    target.scrollIntoView({behavior:"smooth",block:"start"});
+  },80);
+}
+(function(){
+  try{
+    if(new URLSearchParams(location.search).get("p")) return;
+    if(sessionStorage.getItem("moode_welcome")) return;
+    sessionStorage.setItem("moode_welcome","1");
+  }catch(e){}
+  window.addEventListener("load",()=>setTimeout(()=>{ const m=$("welcomeModal"); if(m) m.classList.remove("hidden"); },400));
+})();
