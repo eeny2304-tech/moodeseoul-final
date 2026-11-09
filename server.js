@@ -37,7 +37,7 @@ const defaultData = {
   settings: {
     storeName: process.env.STORE_NAME || "MOODE SEOUL",
     phone: process.env.STORE_PHONE || "(976) 7288-3815",
-    groundCargo: process.env.GROUND_CARGO_DAYS || "10-12 хоног",
+    groundCargo: process.env.GROUND_CARGO_DAYS || "12-14 хоног",
     bankName: "Хаан банк",
     bankAccount: "5071274473",
     bankHolder: "GANBOLD ENKHTSATSRALT",
