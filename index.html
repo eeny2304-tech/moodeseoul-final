@@ -50,7 +50,7 @@
       <span class="soc-name">moode_seoul</span>
     </a>
   </div>
-  <div class="hero-card"><b>Хүргэлт</b><strong id="groundDays">10-12 хоног</strong><span>Express газрын карго</span></div>
+  <div class="hero-card"><b>Хүргэлт</b><strong id="groundDays">12-14 хоног</strong><span>Express газрын карго</span></div>
 </section>
 
 <section class="theme-dark">
@@ -64,7 +64,7 @@
     <button class="brand-tab" data-brand="olive_young" onclick="setBrand(this)">Olive Young</button>
     <button class="brand-tab" data-brand="other" onclick="setBrand(this)">Бусад</button>
   </div>
-  <div id="products" class="grid"></div>
+  <div id="products"></div>
 </section>
 
 <section class="login-cta" id="loginCta">
@@ -249,7 +249,7 @@
   <div id="cargoBlock">
     <div class="cargo-note">
       <b>🚚 Express газрын карго</b>
-      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
+      <p>⏰ 10-12 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
     </div>
   </div>
 
@@ -259,17 +259,17 @@
   </div>
 
   <input id="customerName" placeholder="Нэр">
-  <input id="customerPhone" placeholder="Утасны дугаар">
+  <input id="customerPhone" type="tel" inputmode="tel" placeholder="Утасны дугаар" oninput="renderPayBlock()">
   <input id="customerAddress" placeholder="Хүлээн авах хаяг (дүүрэг, хороо, байр, тоот)">
 
-  <p class="step-title"><span>3</span> Төлбөр</p>
-  <p class="muted-note">Захиалга баталгаажсны дараа данс болон төлбөрийн заавар гарна. Гүйлгээний баримтаа энд хавсаргаж болно.</p>
-  <label class="file-btn receipt-btn">🧾 Гүйлгээний баримт хавсаргах (заавал биш)
+  <p class="step-title"><span>3</span> Төлбөр шилжүүлээд баримтаа оруулна</p>
+  <div id="payBlock"></div>
+  <label class="file-btn receipt-btn">🧾 Банкны аппын баримтын зургийг оруулах <b class="req">*</b>
     <input type="file" id="receiptFile" accept="image/*" onchange="uploadReceipt(this)">
   </label>
   <div id="receiptPreview" class="receipt-preview"></div>
   <input type="hidden" id="receiptUrl">
-  <button class="primary" onclick="submitOrder()">Захиалга баталгаажуулах</button>
+  <div class="cart-actions"><button type="button" class="ghost" onclick="closeCart()">+ Бараа нэмэх</button><button class="primary" onclick="submitOrder()">Захиалга илгээх</button></div>
 </div>
 
 <div id="orderSuccessModal" class="modal hidden">
