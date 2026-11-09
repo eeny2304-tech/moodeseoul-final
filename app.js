@@ -138,7 +138,7 @@ function updateCheckoutMode(){
     if(cbox.dataset.std===undefined) cbox.dataset.std=cbox.innerHTML;
     const included=cart.length>0 && cart.every(x=>x.cargo_included);
     cbox.innerHTML = included
-      ? `<b>🚗 Express газрын карго</b><p>📅 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө.)<br>🏠 Гэр хүргэлт + 9,000₮</p>`
+      ? `<b>🚗 Express газрын карго</b><p>📅 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө.)<br>🏠 Гэр хүргэлт + 9,000₮<br>💳 Монголд буусны дараа, хүргэлтэнд гарахын өмнө хүргэлтийн төлбөрөө шилжүүлж тооцоо дуусмагц хүргэлтэнд гаргана.</p>`
       : cbox.dataset.std;
   }
 
@@ -193,7 +193,7 @@ function openProductModal(id, skipUrl){
     ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
     <div class="pm-cargo">
       <b>🚚 Express газрын карго</b>
-      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.</p>
+      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.<br>💳 Монголд буусны дараа, хүргэлтэнд гарахын өмнө каргоны төлбөрөө шилжүүлж тооцоо дуусмагц хүргэлтэнд гаргана.</p>
       ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
