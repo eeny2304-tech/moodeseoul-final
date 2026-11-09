@@ -27,7 +27,7 @@ const CARGO_LABELS = {
 function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
-async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;$("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;loadProducts()}
+async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;if($("footerPhone")) $("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;loadProducts()}
 
 /* ---------------- Storefront products ---------------- */
 
