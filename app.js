@@ -12,7 +12,7 @@ try { userToken=localStorage.getItem("moode_user_token")||""; user=JSON.parse(lo
 
 const $=id=>document.getElementById(id);
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
-const BRAND_LABELS = { nike:"Nike", adidas:"Adidas", under_armour:"Under Armour", olive_young:"Olive Young" };
+const BRAND_LABELS = { outlet_clothes:"Outlet хувцас", outlet_shoes:"Outlet гутал", costco:"Costco", olive_young:"Olive Young", nike:"Nike", adidas:"Adidas", under_armour:"Under Armour" };
 const BRAND_KEYS = Object.keys(BRAND_LABELS);
 const STAGE_NAMES = { registered:"Бүртгэгдсэн", transport:"Каргонд өгсөн", mongolia:"Монголд буусан", delivered:"Дууссан", cancelled:"Цуцлагдсан" };
 
@@ -426,6 +426,7 @@ function setBrand(btn){
   document.querySelectorAll(".brand-tab").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
   activeBrand = btn.dataset.brand || "";
+  const hint=$("brandHint"); if(hint){ hint.textContent=btn.dataset.hint||""; hint.classList.toggle("hidden",!btn.dataset.hint); }
   filterProducts();
 }
 
@@ -648,10 +649,10 @@ async function adminTab(tab){
               <option value="order">Захиалгийн бараа</option>
             </select>
             <select id="pbrand">
-              <option value="">Брэнд сонгох</option>
-              <option value="nike">Nike</option>
-              <option value="adidas">Adidas</option>
-              <option value="under_armour">Under Armour</option>
+              <option value="">Төрөл сонгох</option>
+              <option value="outlet_clothes">Outlet хувцас</option>
+              <option value="outlet_shoes">Outlet гутал</option>
+              <option value="costco">Costco</option>
               <option value="olive_young">Olive Young</option>
             </select>
           </div>
