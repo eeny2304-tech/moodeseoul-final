@@ -54,7 +54,11 @@
 </section>
 
 <section class="theme-dark">
-  <div class="section-title"><h2>Бэлэн бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
+  <div class="section-title"><h2>Бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
+  <div class="type-tabs" id="typeTabs">
+    <button class="type-tab active" data-type="ready" onclick="setType(this)">🛍️ Бэлэн бараа</button>
+    <button class="type-tab" data-type="order" onclick="setType(this)">✈️ Захиалгаар</button>
+  </div>
   <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
   <div class="brand-tabs" id="brandTabs">
     <button class="brand-tab active" data-brand="" onclick="setBrand(this)">Бүгд</button>
@@ -238,6 +242,31 @@
       <p class="success-note">Төлбөрийн баримтыг шалгаад захиалгыг баталгаажуулна. Захиалгын явцыг дээрх кодоор <b>"Захиалга хянах"</b> хэсгээс харна уу.</p>
     </div>
     <button class="primary" onclick="closeOrderSuccess()">Ойлголоо</button>
+  </div>
+</div>
+
+<div id="editProductModal" class="modal hidden">
+  <div class="admin-box order-detail-box edit-prod-box">
+    <div class="drawer-head"><h2 id="e_title">Бараа засах</h2><button onclick="closeEditProduct()">×</button></div>
+    <div class="edit-grid">
+      <label>Нэр<input id="e_name"></label>
+      <label>Үнэ ₮<input id="e_price" type="number"></label>
+      <label>Үнэ ₩<input id="e_krw" type="number"></label>
+      <label>Хуучин үнэ ₮ (хямдрал)<input id="e_old" type="number"></label>
+      <label>Ангилал<select id="e_cat"><option value="mn_belen">Монголд бэлэн</option><option value="kr_belen">Солонгост бэлэн</option><option value="order">Захиалгийн бараа</option></select></label>
+      <label>Брэнд<select id="e_brand"><option value="">—</option><option value="nike">Nike</option><option value="adidas">Adidas</option><option value="under_armour">Under Armour</option><option value="olive_young">Olive Young</option></select></label>
+    </div>
+    <label class="edit-full">📍 Авах цэг<input id="e_pickup"></label>
+    <label class="check-row"><input type="checkbox" id="e_cargo"> Карго орсон</label>
+    <label class="check-row"><input type="checkbox" id="e_feat"> 🔥 Өнөөдрийн онцлох</label>
+    <p class="field-label">Хэмжээ бүрийн тоо ширхэг</p>
+    <div id="e_sizes"></div>
+    <button type="button" class="file-btn" onclick="addEditSizeRow()">+ Хэмжээ нэмэх</button>
+    <label class="edit-full">Хэмжээгүй бол тоо ширхэг<input id="e_stock" type="number"></label>
+    <label class="file-btn">📷 Зураг нэмэх<input type="file" accept="image/*" multiple onchange="uploadEditImages(this)"></label>
+    <div id="e_preview" class="img-preview multi"></div>
+    <label class="edit-full">Тайлбар<textarea id="e_desc"></textarea></label>
+    <div class="cart-actions"><button type="button" class="ghost" onclick="closeEditProduct()">Болих</button><button class="primary" onclick="saveEditProduct()">💾 Хадгалах</button></div>
   </div>
 </div>
 
