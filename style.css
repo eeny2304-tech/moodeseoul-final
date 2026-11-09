@@ -948,3 +948,4 @@ button.primary:active{opacity:.85;}
 .pay-row{background:transparent!important;border-radius:0!important;margin:0!important}
 .pay-card .pay-row b{color:#222}
 .success-thanks{font-size:1.05rem;font-weight:700;margin:0 0 8px;color:var(--ink)}
+.pay-row b.acct-num{font-size:.92rem;letter-spacing:0;word-break:normal;overflow-wrap:anywhere}
