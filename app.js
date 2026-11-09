@@ -66,6 +66,7 @@ function productCardHtml(p){
   </article>`;
 }
 
+function fixAcct(){ if(settings && String(settings.bankAccount||"").replace(/\s/g,"")==="5071274473") settings.bankAccount="MN050005005071274473"; }
 async function loadProducts(){
   products=await api("/api/products");
   if(!products.length) $("products").innerHTML=`<div class="admin-card">Одоогоор бараа нэмэгдээгүй байна.</div>`;
@@ -350,12 +351,6 @@ async function submitOrder(){
 
 function showOrderSuccess(code){
   $("successCode").textContent=code;
-  $("successBankName").textContent=settings.bankName||"—";
-  const acct = settings.bankAccount||"—";
-  $("successBankAccount").innerHTML = acct==="—" ? "—"
-    : `${esc(acct)}<button class="copy-btn" onclick="copyAccount(event,'${esc(acct)}')">Хуулах</button>`;
-  $("successBankAccount").classList.add("acct");
-  $("successBankHolder").textContent=settings.bankHolder||"—";
   $("orderSuccessModal").classList.remove("hidden");
 }
 function closeOrderSuccess(){$("orderSuccessModal").classList.add("hidden")}
@@ -465,7 +460,7 @@ async function trackOrders(){
 function trackMsg(o){
   let t="";
   const due=Number(o.total||0)-Number(o.paid||0)>0;
-  if(o.status==="registered") t=due?"💳 Төлбөр баталгаажихыг хүлээж байна. Төлбөрөө хийсний дараа баримтаа илгээнэ үү.":"📦 Захиалга баталгаажлаа. Солонгосоос каргонд өгөхөөр бэлтгэж байна.";
+  if(o.status==="registered") t=due?(o.receipt?"🧾 Баримтыг хүлээж авлаа. Төлбөрийг шалгаж байна.":"💳 Төлбөр баталгаажихыг хүлээж байна. Төлбөрөө хийсний дараа баримтаа илгээнэ үү."):"📦 Захиалга баталгаажлаа. Солонгосоос каргонд өгөхөөр бэлтгэж байна.";
   else if(o.status==="transport") t="🚚 Каргонд өгсөн. Монголд ирмэгц карго тантай холбогдоно."+(o.cargo_code?` Каргоны код: ${o.cargo_code}`:"");
   else if(o.status==="mongolia") t="🇲🇳 Бараа Монголд ирлээ. Карго тантай холбогдож хүргэнэ."+(o.cargo_code?` Каргоны код: ${o.cargo_code}`:"");
   else if(o.status==="delivered") t="✅ Хүлээн авсан. Баярлалаа!";
@@ -1241,7 +1236,7 @@ function copyBtn(v,label){ return `<button type="button" class="copy-btn" onclic
 function renderPayBlock(){
   const el=$("payBlock"); if(!el) return;
   if(!cart.length){ el.innerHTML=""; return; }
-  const acct=settings.bankAccount||"";
+  fixAcct(); const acct=settings.bankAccount||"";
   const phone=($("customerPhone")?.value||"").trim();
   el.innerHTML=`<div class="pay-card">
     <div class="pay-bank">${esc(settings.bankName||"Банк")}</div>
