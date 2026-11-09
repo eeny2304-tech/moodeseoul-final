@@ -39,7 +39,7 @@ const defaultData = {
     phone: process.env.STORE_PHONE || "(976) 7288-3815",
     groundCargo: process.env.GROUND_CARGO_DAYS || "12-14 хоног",
     bankName: "Хаан банк",
-    bankAccount: "5071274473",
+    bankAccount: "MN050005005071274473",
     bankHolder: "GANBOLD ENKHTSATSRALT",
     krwBankName: "우리",
     krwBankAccount: "1002861393082",
