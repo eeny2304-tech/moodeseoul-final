@@ -913,3 +913,37 @@ button.primary:active{opacity:.85;}
 .product .p .size-chips .chip.on{background:var(--grad); color:#0b0b0e; border-color:transparent;}
 .product .p .size-chips .chip.out{opacity:.4; text-decoration:line-through;}
 #cart{padding-bottom:0;}
+
+/* ---- arbu-style sections, sale, cargo, payment ---- */
+.prod-section{margin:0 0 26px}
+.ps-head{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;flex-wrap:wrap}
+.ps-head h3{margin:0;font-size:1.15rem;color:var(--ink)}
+.ps-head small{color:var(--muted)}
+.theme-dark .grid.wrap{flex-wrap:wrap;overflow:visible}
+.theme-dark .grid.wrap .product{flex:0 0 calc(50% - 8px)}
+@media(min-width:720px){.theme-dark .grid.wrap .product{flex:0 0 calc(25% - 12px)}}
+.product-media{position:relative}
+.sale-badge{position:absolute;top:8px;left:8px;background:#e11d48;color:#fff;font-weight:800;font-size:.8rem;padding:3px 8px;border-radius:8px;z-index:2}
+.old-price{color:var(--muted);font-weight:400;font-size:.85em;margin-left:4px}
+.cargo-in{color:#3b82f6;font-size:.8em;font-weight:600}
+.sale-pill{background:#e11d48;color:#fff;font-weight:800;font-size:.8rem;padding:2px 8px;border-radius:8px}
+.check-row{display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--ink)}
+.check-row input{width:auto}
+.tog-row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.tog{background:var(--bg-card-2)!important;color:var(--muted)!important;border:1px solid var(--line)!important;font-size:.75rem;padding:4px 8px;border-radius:999px}
+.tog.on{background:var(--grad)!important;color:#fff!important}
+.pay-card{background:#fff1f5;color:#222;border:1px solid #fbcfe0;border-radius:14px;padding:14px;margin:8px 0 12px}
+.pay-bank{font-weight:800;font-size:1.05rem;margin-bottom:6px}
+.pay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #f3b5cc;flex-wrap:wrap}
+.pay-row span{color:#777;min-width:110px;font-size:.85rem}
+.pay-row b{flex:1;word-break:break-all}
+.pay-amt{color:#e11d48;font-size:1.1rem}
+.pay-row .copy-btn{background:#fff;color:#e11d48;border:1px solid #e11d48;border-radius:8px;padding:3px 10px;font-size:.8rem}
+.pay-warn{margin-top:8px;background:#fff;border-left:4px solid #e11d48;padding:8px 10px;border-radius:6px;font-size:.85rem}
+.receipt-btn{border:2px dashed #e11d48;border-radius:12px;padding:14px;text-align:center}
+.receipt-btn .req{color:#e11d48}
+.cart-actions{display:flex;gap:8px}
+.cart-actions .ghost{flex:0 0 38%;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:12px}
+.cart-actions .primary{flex:1}
+.pay-row{background:transparent!important;border-radius:0!important;margin:0!important}
+.pay-card .pay-row b{color:#222}
