@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MOODE SEOUL — Korea to Mongolia</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MOODE SEOUL">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/IMG_8588.jpeg">
 <meta name="description" content="Солонгосоос шууд захиалж, жинхэнэ брэндийг хүргэнэ. Nike, Adidas, Under Armour, Olive Young — оригинал бараа, найдвартай хүргэлт.">
 
 <!-- Social preview (Facebook / Instagram / Messenger) -->
@@ -201,7 +208,7 @@
 
   <div id="receiveChoice" class="hidden">
     <p class="field-label">Барааг хаанаас авах вэ?</p>
-    <select id="receiveWhere" onchange="updateCheckoutMode()">
+    <select id="receiveWhere" onchange="this.dataset.touched=1;updateCheckoutMode()">
       <option value="mn">🇲🇳 Монголд авах</option>
       <option value="kr">🇰🇷 Солонгост авах</option>
     </select>
@@ -267,6 +274,19 @@
     <div id="e_preview" class="img-preview multi"></div>
     <label class="edit-full">Тайлбар<textarea id="e_desc"></textarea></label>
     <div class="cart-actions"><button type="button" class="ghost" onclick="closeEditProduct()">Болих</button><button class="primary" onclick="saveEditProduct()">💾 Хадгалах</button></div>
+  </div>
+</div>
+
+<div id="welcomeModal" class="modal hidden" onclick="if(event.target===this)closeWelcome()">
+  <div class="welcome-box">
+    <img class="welcome-logo" src="/IMG_8588.jpeg" alt="MOODE SEOUL" onerror="this.style.display='none'">
+    <h2>Сайн байна уу! 👋</h2>
+    <p class="welcome-sub">Юу хийхээ сонгоно уу</p>
+    <button class="welcome-opt main" onclick="welcomeGo('track')"><span class="wi">📦</span><span><b>Захиалгаа шалгах</b><small>Захиалсан бараагаа хянах</small></span><i>›</i></button>
+    <div class="welcome-or"><span>эсвэл дэлгүүр хэсэх</span></div>
+    <button class="welcome-opt" onclick="welcomeGo('order')"><span class="wi">🇰🇷</span><span><b>Солонгосоос захиалах</b><small>Хүссэн бараагаа захиалаад Монголд хүлээн авна</small></span><i>›</i></button>
+    <button class="welcome-opt" onclick="welcomeGo('kr')"><span class="wi">🚚</span><span><b>Солонгост тэгбэгээр авах</b><small>Солонгост байгаа хүмүүст · 택배</small></span><i>›</i></button>
+    <a href="#" class="welcome-skip" onclick="closeWelcome();return false;">Зүгээр үзэх</a>
   </div>
 </div>
 
