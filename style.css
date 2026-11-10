@@ -1011,3 +1011,9 @@ button.primary:active{opacity:.85;}
 .steps .sn{flex:0 0 28px;height:28px;font-size:.9rem}
 .steps b{font-size:.95rem}
 .steps p{font-size:.8rem;margin-top:2px}
+.cart-sum{margin:10px 0;padding:12px;border-radius:14px;background:var(--bg-card-2);border:1px solid var(--line)}
+.sum-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:.92rem;color:var(--ink)}
+.sum-row b.inc{color:#3b82f6}
+.sum-row.total{border-top:1px dashed var(--line);margin-top:6px;padding-top:9px;font-size:1.05rem;font-weight:800}
+.sum-warn{font-size:.78rem;color:#b45309;margin:2px 0 4px}
+.sum-note{margin-top:8px;font-size:.8rem;color:var(--muted);line-height:1.45}
