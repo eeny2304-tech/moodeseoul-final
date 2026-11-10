@@ -1021,3 +1021,7 @@ button.primary:active{opacity:.85;}
 .pay-break div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:.88rem;color:#444}
 .pay-break b{color:#222}
 .pay-row b.acct-num{font-size:.82rem}
+#deliveryChoiceWrap{margin:10px 0}
+.dc-label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.dc-note{margin:6px 0 0;font-size:.82rem;color:var(--muted)}
+#deliveryChoice:disabled{opacity:.8}
