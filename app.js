@@ -11,6 +11,7 @@ let userToken="", user=null;
 try { userToken=localStorage.getItem("moode_user_token")||""; user=JSON.parse(localStorage.getItem("moode_user")||"null"); } catch(_){}
 
 const $=id=>document.getElementById(id);
+const CARGO_PER_KG=8000, CARGO_DELIVERY=9000;
 const CATEGORY_LABELS = { mn_belen:"Монголд бэлэн", kr_belen:"Солонгост бэлэн", order:"Захиалгийн бараа" };
 const BRAND_LABELS = { outlet_clothes:"Outlet хувцас", outlet_shoes:"Outlet гутал", costco:"Costco", olive_young:"Olive Young", nike:"Nike", adidas:"Adidas", under_armour:"Under Armour" };
 const BRAND_KEYS = Object.keys(BRAND_LABELS);
@@ -94,8 +95,35 @@ function renderCart(){
   const thumb=x=>{const im=(Array.isArray(x.images)&&x.images[0])||x.image||"";return im?`<img class="ci-img" src="${im}" alt="">`:`<div class="ci-img ci-ph"></div>`;};
   setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   $("cartItems").innerHTML=cart.length
-    ? cart.map((x,i)=>`<div class="cart-item">${thumb(x)}<div class="ci-info"><b>${esc(x.name)}</b>${x.size?`<span>Размер: ${esc(x.size)}</span>`:""}<span>${money(x.price)}</span></div><div class="ci-right"><div class="qty"><button type="button" onclick="changeQty(${i},-1)">−</button><span>${x.qty}</span><button type="button" onclick="changeQty(${i},1)">+</button></div><b>${money(x.price*x.qty)}</b><button type="button" class="ci-del" onclick="removeFromCart(${i})">Устгах</button></div></div>`).join("")+`<div class="cart-total"><span>Барааны нийт дүн</span><b>${money(cart.reduce((s,x)=>s+x.price*x.qty,0))}</b></div>`
+    ? cart.map((x,i)=>`<div class="cart-item">${thumb(x)}<div class="ci-info"><b>${esc(x.name)}</b>${x.size?`<span>Размер: ${esc(x.size)}</span>`:""}<span>${money(x.price)}</span></div><div class="ci-right"><div class="qty"><button type="button" onclick="changeQty(${i},-1)">−</button><span>${x.qty}</span><button type="button" onclick="changeQty(${i},1)">+</button></div><b>${money(x.price*x.qty)}</b><button type="button" class="ci-del" onclick="removeFromCart(${i})">Устгах</button></div></div>`).join("")+`<div id="cartSummary">${cartSummaryHtml()}</div>`
     : `<p class="cart-empty">Сагс хоосон байна.</p>`;
+}
+function cargoCalc(){
+  const items=cart.filter(x=>!x.cargo_included);
+  const kg=items.reduce((s,x)=>s+(Number(x.weight_kg)||0)*x.qty,0);
+  const missing=items.some(x=>!(Number(x.weight_kg)>0));
+  const fee=Math.round(kg*CARGO_PER_KG);
+  const goods=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  return {kg,missing,fee,goods,allIncluded:items.length===0};
+}
+function kgText(n){ return (Math.round(n*100)/100).toString(); }
+function cartSummaryHtml(){
+  if(!cart.length) return "";
+  const goods=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  if(typeof checkoutMode!=="function" || checkoutMode()!=="cargo")
+    return `<div class="cart-total"><span>Барааны нийт дүн</span><b>${money(goods)}</b></div>`;
+  const c=cargoCalc();
+  const cargoRow=c.allIncluded
+    ? `<div class="sum-row"><span>🚚 Карго</span><b class="inc">Үнэд орсон</b></div>`
+    : `<div class="sum-row"><span>🚚 Карго (${kgText(c.kg)} кг × ${money(CARGO_PER_KG)})</span><b>${c.missing?"~ ":""}${money(c.fee)}</b></div>${c.missing?`<div class="sum-warn">⚠️ Зарим барааны жин оруулаагүй тул карго урьдчилсан дүн.</div>`:""}`;
+  const total=goods+c.fee+CARGO_DELIVERY;
+  return `<div class="cart-sum">
+    <div class="sum-row"><span>🛍️ Барааны үнэ</span><b>${money(goods)}</b></div>
+    ${cargoRow}
+    <div class="sum-row"><span>🏠 Гэр хүргэлт</span><b>${money(CARGO_DELIVERY)}</b></div>
+    <div class="sum-row total"><span>Нийт дүн</span><b>${c.missing?"~ ":""}${money(total)}</b></div>
+    <div class="sum-note">💳 Одоо төлөх: <b>${money(goods)}</b> (барааны үнэ).<br>Карго + хүргэлт (<b>${c.missing?"~ ":""}${money(c.fee+CARGO_DELIVERY)}</b>) Монголд буусны дараа, хүргэлтэнд гарахын өмнө төлнө.</div>
+  </div>`;
 }
 function changeQty(i,d){
   const it=cart[i]; if(!it) return;
@@ -123,6 +151,7 @@ function checkoutMode(){
 
 function updateCheckoutMode(){
   if(!$("cart")) return;
+  const sm=$("cartSummary"); if(sm) sm.innerHTML=cartSummaryHtml();
   const rw=$("receiveWhere"); if(window.__preferKr && rw && !rw.dataset.touched && rw.value!=="kr") rw.value="kr";
   setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   const cats = cartCategories();
@@ -335,6 +364,9 @@ async function submitOrder(){
   if(!address) return alert("Хүлээн авах хаягаа оруулна уу.");
   if(mode === "cargo"){
     cargo_type = "ground";
+    const cc=cargoCalc();
+    note = cc.allIncluded ? `Карго үнэд орсон. Гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (Монголд буусны дараа)`
+      : `Карго ${cc.missing?"~":""}${kgText(cc.kg)}кг ≈ ${cc.fee.toLocaleString("en-US")}₮ + гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (Монголд буусны дараа төлнө)`;
   } else {
     if(mode === "mn_direct"){
       cargo_type = "delivery";
@@ -643,6 +675,7 @@ async function adminTab(tab){
             <input id="pp" type="number" placeholder="Үнэ ₮">
             <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
             <input id="pold" type="number" placeholder="Хуучин үнэ ₮ (хямдрал харуулах бол)">
+            <input id="pw" type="number" step="0.1" placeholder="Жин кг (жиш: 1.5) — картын тооцоонд">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
               <option value="kr_belen">Солонгост бэлэн</option>
@@ -1052,6 +1085,7 @@ async function addProduct(){
     images:pendingImages,
     pickup:$("ppickup").value,
     old_price:$("pold").value,
+    weight_kg:$("pw").value,
     cargo_included:$("pcargo").checked,
     featured:$("pfeat").checked,
     description:$("pd").value,
@@ -1066,7 +1100,7 @@ function openEditProduct(id){
   const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
   editingProductId=id;
   const set=(k,v)=>{ $("e_"+k).value=v??""; };
-  set("name",p.name); set("price",p.price); set("krw",p.price_krw||""); set("old",Number(p.old_price)>0?p.old_price:"");
+  set("name",p.name); set("price",p.price); set("krw",p.price_krw||""); set("old",Number(p.old_price)>0?p.old_price:""); set("weight",p.weight_kg>0?p.weight_kg:"");
   set("cat",p.category||"order"); set("brand",p.brand||""); set("pickup",p.pickup||""); set("desc",p.description||"");
   $("e_cargo").checked=!!p.cargo_included; $("e_feat").checked=!!p.featured;
   $("e_sizes").innerHTML="";
@@ -1108,7 +1142,7 @@ async function saveEditProduct(){
   const orig=(window.__allProducts||[]).find(x=>x.id==editingProductId)||{};
   try{
     await api("/api/admin/products/"+editingProductId,{method:"PUT",body:JSON.stringify({...orig,
-      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:$("e_old").value,
+      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:$("e_old").value,weight_kg:$("e_weight").value,
       category:$("e_cat").value,brand:$("e_brand").value,pickup:$("e_pickup").value,description:$("e_desc").value,
       cargo_included:$("e_cargo").checked,featured:$("e_feat").checked,
       image:editImages[0]||"",images:editImages,sizes,stock})});
