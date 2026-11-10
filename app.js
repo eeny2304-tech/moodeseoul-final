@@ -104,8 +104,15 @@ function cargoCalc(){
   const missing=items.some(x=>!(Number(x.weight_kg)>0));
   const fee=Math.round(kg*CARGO_PER_KG);
   const goods=cart.reduce((s,x)=>s+x.price*x.qty,0);
-  return {kg,missing,fee,goods,allIncluded:items.length===0};
+  const pickup=deliveryMode()==="pickup";
+  return {kg,missing,fee,goods,allIncluded:items.length===0,pickup,delivery:pickup?0:CARGO_DELIVERY};
 }
+function hasCostco(){ return cart.some(x=>x.brand==="costco"); }
+function deliveryMode(){
+  if(hasCostco()) return "pickup";
+  const s=$("deliveryChoice"); return s&&s.value==="pickup"?"pickup":"home";
+}
+const PICKUP_ADDRESS="Oneway cargo — 3-р эмнэлгийн хажууд (очиж авна)";
 function kgText(n){ return (Math.round(n*100)/100).toString(); }
 function cartSummaryHtml(){
   if(!cart.length) return "";
@@ -116,11 +123,11 @@ function cartSummaryHtml(){
   const cargoRow=c.allIncluded
     ? `<div class="sum-row"><span>🚚 Карго</span><b class="inc">Үнэд орсон</b></div>`
     : `<div class="sum-row"><span>🚚 Карго (${kgText(c.kg)} кг × ${money(CARGO_PER_KG)})</span><b>${c.missing?"~ ":""}${money(c.fee)}</b></div>${c.missing?`<div class="sum-warn">⚠️ Зарим барааны жин оруулаагүй тул карго урьдчилсан дүн.</div>`:""}`;
-  const total=goods+c.fee+CARGO_DELIVERY;
+  const total=goods+c.fee+c.delivery;
   return `<div class="cart-sum">
     <div class="sum-row"><span>🛍️ Барааны үнэ</span><b>${money(goods)}</b></div>
     ${cargoRow}
-    <div class="sum-row"><span>🏠 Гэр хүргэлт</span><b>${money(CARGO_DELIVERY)}</b></div>
+    <div class="sum-row"><span>${c.pickup?"📦 Каргоноос очиж авна":"🏠 Гэр хүргэлт"}</span><b>${c.pickup?"0₮":money(c.delivery)}</b></div>
     <div class="sum-row total"><span>Нийт дүн</span><b>${c.missing?"~ ":""}${money(total)}</b></div>
     <div class="sum-note">💳 Бүх дүнг одоо шилжүүлнэ: <b>${c.missing?"~ ":""}${money(total)}</b> (бараа + карго + хүргэлт).</div>
   </div>`;
@@ -171,7 +178,18 @@ function updateCheckoutMode(){
       : cbox.dataset.std;
   }
 
-  $("customerAddress").classList.remove("hidden");
+  const dc=$("deliveryChoice");
+  if(dc){
+    const costco=hasCostco();
+    dc.querySelector('option[value="home"]').disabled=costco;
+    if(costco) dc.value="pickup";
+    dc.disabled=costco;
+    const nt=$("deliveryChoiceNote");
+    nt.textContent = costco ? "🛒 Costco бараа хүргэлтгүй — Oneway cargo-оос өөрөө очиж авна."
+      : (dc.value==="pickup" ? "📍 Oneway cargo, 3-р эмнэлгийн хажууд очиж авна. Хүргэлтийн 9,000₮ төлөхгүй." : "");
+  }
+  const pickupNow = isCargo && deliveryMode()==="pickup";
+  $("customerAddress").classList.toggle("hidden", pickupNow);
   $("deliveryNote").classList.toggle("hidden", mode !== "mn_direct");
 
   if(mode === "cargo"){
@@ -361,12 +379,14 @@ async function submitOrder(){
   let note = "";
 
   address = $("customerAddress").value.trim();
+  const pickupCargo = mode==="cargo" && deliveryMode()==="pickup";
+  if(pickupCargo) address = PICKUP_ADDRESS;
   if(!address) return alert("Хүлээн авах хаягаа оруулна уу.");
   if(mode === "cargo"){
     cargo_type = "ground";
     const cc=cargoCalc();
-    note = cc.allIncluded ? `Карго үнэд орсон. Гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (нийт дүнд орсон)`
-      : `Карго ${cc.missing?"~":""}${kgText(cc.kg)}кг ≈ ${cc.fee.toLocaleString("en-US")}₮ + гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (нийт дүнд орсон)`;
+    const dl = cc.pickup ? "Каргоноос өөрөө очиж авна (Oneway cargo, 3-р эмнэлгийн хажууд)" : `Гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮`;
+    note = (cc.allIncluded ? "Карго үнэд орсон. " : `Карго ${cc.missing?"~":""}${kgText(cc.kg)}кг ≈ ${cc.fee.toLocaleString("en-US")}₮. `) + dl + " (нийт дүнд орсон)";
   } else {
     if(mode === "mn_direct"){
       cargo_type = "delivery";
@@ -1308,7 +1328,7 @@ async function setOldPrice(id){
 /* ---------------- Payment block in cart ---------------- */
 function payAmount(){
   const items=cart.reduce((s,x)=>s+x.price*x.qty,0);
-  if(typeof checkoutMode==="function" && checkoutMode()==="cargo"){ const c=cargoCalc(); return items+c.fee+CARGO_DELIVERY; }
+  if(typeof checkoutMode==="function" && checkoutMode()==="cargo"){ const c=cargoCalc(); return items+c.fee+c.delivery; }
   return items + (typeof checkoutMode==="function" && checkoutMode()==="mn_direct" ? 7000 : 0);
 }
 function copyBtn(v,label){ return `<button type="button" class="copy-btn" onclick="copyAccount(event,'${esc(String(v))}')">${label||"Хуулах"}</button>`; }
@@ -1340,7 +1360,7 @@ function renderPayBlock(){
     rows=`<div class="pay-break">
       <div><span>🛍️ Барааны үнэ</span><b>${money(g)}</b></div>
       <div><span>🚚 Карго${c.allIncluded?"":` (${kgText(c.kg)} кг)`}</span><b>${c.allIncluded?"Үнэд орсон":ap+money(c.fee)}</b></div>
-      <div><span>🏠 Гэр хүргэлт</span><b>${money(CARGO_DELIVERY)}</b></div>
+      <div><span>${c.pickup?"📦 Каргоноос очиж авна":"🏠 Гэр хүргэлт"}</span><b>${c.pickup?"0₮":money(c.delivery)}</b></div>
     </div>`;
   }
   el.innerHTML=`<div class="pay-card">
