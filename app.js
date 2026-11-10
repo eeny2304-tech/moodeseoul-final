@@ -28,7 +28,7 @@ const CARGO_LABELS = {
 function cargoLabel(t){ return CARGO_LABELS[t] || CARGO_LABELS.ground; }
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
-async function init(){const s=await api("/api/settings");settings=s;$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;if($("footerPhone")) $("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;loadProducts()}
+async function init(){const s=await api("/api/settings");settings=s;fixAcct();$("brandName").textContent=s.storeName;$("footerName").textContent=s.storeName;if($("footerPhone")) $("footerPhone").textContent=s.phone;$("announce").textContent=s.announcement;loadProducts()}
 
 /* ---------------- Storefront products ---------------- */
 
@@ -122,7 +122,7 @@ function cartSummaryHtml(){
     ${cargoRow}
     <div class="sum-row"><span>🏠 Гэр хүргэлт</span><b>${money(CARGO_DELIVERY)}</b></div>
     <div class="sum-row total"><span>Нийт дүн</span><b>${c.missing?"~ ":""}${money(total)}</b></div>
-    <div class="sum-note">💳 Одоо төлөх: <b>${money(goods)}</b> (барааны үнэ).<br>Карго + хүргэлт (<b>${c.missing?"~ ":""}${money(c.fee+CARGO_DELIVERY)}</b>) Монголд буусны дараа, хүргэлтэнд гарахын өмнө төлнө.</div>
+    <div class="sum-note">💳 Бүх дүнг одоо шилжүүлнэ: <b>${c.missing?"~ ":""}${money(total)}</b> (бараа + карго + хүргэлт).</div>
   </div>`;
 }
 function changeQty(i,d){
@@ -167,7 +167,7 @@ function updateCheckoutMode(){
     if(cbox.dataset.std===undefined) cbox.dataset.std=cbox.innerHTML;
     const included=cart.length>0 && cart.every(x=>x.cargo_included);
     cbox.innerHTML = included
-      ? `<b>🚗 Express газрын карго</b><p>📅 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө.)<br>🏠 Гэр хүргэлт + 9,000₮<br>💳 Монголд буусны дараа, хүргэлтэнд гарахын өмнө хүргэлтийн төлбөрөө шилжүүлж тооцоо дуусмагц хүргэлтэнд гаргана.</p>`
+      ? `<b>🚗 Express газрын карго</b><p>📅 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө.)<br>🏠 Гэр хүргэлт + 9,000₮<br>Хүргэлтийн төлбөрийг шууд нийт дүнд бодож төлнө.</p>`
       : cbox.dataset.std;
   }
 
@@ -222,7 +222,7 @@ function openProductModal(id, skipUrl){
     ${p.description?`<h3 class="section-sub">Тайлбар</h3><p class="pm-desc">${esc(p.description)}</p>`:""}
     <div class="pm-cargo">
       <b>🚚 Express газрын карго</b>
-      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр барааны үнээс тусдаа.<br>💳 Монголд буусны дараа, хүргэлтэнд гарахын өмнө каргоны төлбөрөө шилжүүлж тооцоо дуусмагц хүргэлтэнд гаргана.</p>
+      <p>⏰ 12-14 хоног (Мягмар, Баасан гаригт каргонд өгнө)<br>💰 8,000₮ (1 кг) + 9,000₮ (гэр хүргэлт) = 17,000₮<br>Каргоны төлбөр, хүргэлтийн төлбөрийг шууд нийт бодож төлнө.</p>
       ${p.pickup?`<p class="pm-pickup"><b>📍 Авах цэг:</b> ${esc(p.pickup)}</p>`:""}
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
@@ -365,8 +365,8 @@ async function submitOrder(){
   if(mode === "cargo"){
     cargo_type = "ground";
     const cc=cargoCalc();
-    note = cc.allIncluded ? `Карго үнэд орсон. Гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (Монголд буусны дараа)`
-      : `Карго ${cc.missing?"~":""}${kgText(cc.kg)}кг ≈ ${cc.fee.toLocaleString("en-US")}₮ + гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (Монголд буусны дараа төлнө)`;
+    note = cc.allIncluded ? `Карго үнэд орсон. Гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (нийт дүнд орсон)`
+      : `Карго ${cc.missing?"~":""}${kgText(cc.kg)}кг ≈ ${cc.fee.toLocaleString("en-US")}₮ + гэр хүргэлт ${CARGO_DELIVERY.toLocaleString("en-US")}₮ (нийт дүнд орсон)`;
   } else {
     if(mode === "mn_direct"){
       cargo_type = "delivery";
@@ -378,7 +378,7 @@ async function submitOrder(){
   }
 
   if(!$("receiptUrl").value) return alert("Төлбөр шилжүүлсний баримтын зургийг хавсаргана уу.");
-  const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  const total=(mode==="cargo")?payAmount():cart.reduce((s,x)=>s+x.price*x.qty,0);
   try{
     const o=await api("/api/orders",{method:"POST",body:JSON.stringify({customer_phone:phone,customer_name:$("customerName").value,address,cargo_type,note,receipt:$("receiptUrl").value||"",total,items:cart.map(x=>({product_id:x.id,name:x.name,qty:x.qty,price:x.price,size:x.size,image:x.image}))})});
     cart=[];
@@ -1308,6 +1308,7 @@ async function setOldPrice(id){
 /* ---------------- Payment block in cart ---------------- */
 function payAmount(){
   const items=cart.reduce((s,x)=>s+x.price*x.qty,0);
+  if(typeof checkoutMode==="function" && checkoutMode()==="cargo"){ const c=cargoCalc(); return items+c.fee+CARGO_DELIVERY; }
   return items + (typeof checkoutMode==="function" && checkoutMode()==="mn_direct" ? 7000 : 0);
 }
 function copyBtn(v,label){ return `<button type="button" class="copy-btn" onclick="copyAccount(event,'${esc(String(v))}')">${label||"Хуулах"}</button>`; }
@@ -1331,12 +1332,23 @@ function renderPayBlock(){
     </div>`;
     return;
   }
+  fixAcct();
   const acct=settings.bankAccount||"";
+  let rows="";
+  if(checkoutMode()==="cargo"){
+    const c=cargoCalc(), g=c.goods, ap=c.missing?"~ ":"";
+    rows=`<div class="pay-break">
+      <div><span>🛍️ Барааны үнэ</span><b>${money(g)}</b></div>
+      <div><span>🚚 Карго${c.allIncluded?"":` (${kgText(c.kg)} кг)`}</span><b>${c.allIncluded?"Үнэд орсон":ap+money(c.fee)}</b></div>
+      <div><span>🏠 Гэр хүргэлт</span><b>${money(CARGO_DELIVERY)}</b></div>
+    </div>`;
+  }
   el.innerHTML=`<div class="pay-card">
     <div class="pay-bank">${esc(settings.bankName||"Банк")}</div>
     <div class="pay-row"><span>Данс</span><b class="acct-num">${esc(acct||"—")}</b>${acct?copyBtn(acct):""}</div>
     <div class="pay-row"><span>Хүлээн авагч</span><b>${esc(settings.bankHolder||"—")}</b></div>
-    <div class="pay-row"><span>Дүн</span><b class="pay-amt">${money(payAmount())}</b>${copyBtn(payAmount())}</div>
+    ${rows}
+    <div class="pay-row"><span>Нийт шилжүүлэх дүн</span><b class="pay-amt">${checkoutMode()==="cargo"&&cargoCalc().missing?"~ ":""}${money(payAmount())}</b>${copyBtn(payAmount())}</div>
     ${memo}
   </div>`;
 }
