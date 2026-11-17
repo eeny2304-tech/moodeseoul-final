@@ -649,6 +649,7 @@ async function adminTab(tab){
       try{ const ps=await api("/api/admin/products"); lowItems=ps.filter(p=>{const t=Array.isArray(p.sizes)&&p.sizes.length?p.sizes.reduce((x,z)=>x+(Number(z.qty)||0),0):Number(p.stock||0);return t<=3;}).length; }catch(_){}
       const todayKey=now.toISOString().slice(0,10);
       const newToday=os.filter(o=>String(o.created_at||"").slice(0,10)===todayKey).length;
+      const needReceipt=os.filter(o=>o.status!=="cancelled"&&o.receipt&&Number(o.total||0)-Number(o.paid||0)>0).length;
       const needPay=os.filter(o=>o.status==="registered"&&Number(o.total||0)-Number(o.paid||0)>0).length;
       const needShip=os.filter(o=>o.status==="registered"&&Number(o.total||0)-Number(o.paid||0)<=0).length;
       const arrived=os.filter(o=>o.status==="mongolia").length;
@@ -656,6 +657,7 @@ async function adminTab(tab){
       $("adminContent").innerHTML=`<h2>Хяналтын самбар</h2>
         <h3 class="section-sub">Анхаарах зүйл</h3>
         <div class="todo-grid">
+          <button class="todo ${needReceipt?"warn":""}" onclick="gotoOrders('receipt')"><span>${needReceipt}</span>🧾 Баримт шалгах</button>
           <button class="todo" onclick="gotoOrders('unpaid')"><span>${needPay}</span>Төлбөр хүлээж буй</button>
           <button class="todo" onclick="gotoOrders('registered')"><span>${needShip}</span>Каргонд өгөх / бүртгэгдсэн</button>
           <button class="todo" onclick="gotoOrders('mongolia')"><span>${arrived}</span>Монголд ирсэн (хүргэх)</button>
@@ -866,7 +868,9 @@ function openAdminOrderDetail(id){
       <div><span>Огноо</span><b>${esc(created)}</b></div>
       <div><span>Нэр</span><b>${esc(o.customer_name||"—")}</b></div>
       <div><span>Утас</span><b>${esc(o.customer_phone)}</b></div>
+      <div><span>Хаяг</span><b>${esc(o.address||"—")}</b></div>
       <div><span>Нийт үнэ</span><b>${money(o.total)}</b></div>
+      <div><span>Төлсөн</span><b>${money(o.paid)}</b></div>
       <div><span>Үлдэгдэл</span><b class="${balance>0?'bal-due':''}">${money(balance)}</b></div>
       <div><span>Хүргэлт</span><b>${cargoLabel(o.cargo_type)}</b></div>
       ${o.note?`<div><span>Тэмдэглэл</span><b>${esc(o.note)}</b></div>`:""}
@@ -875,7 +879,11 @@ function openAdminOrderDetail(id){
     ${items.map(it=>`<div class="admin-card"><b>${esc(it.name)}</b>${it.size?` · Хэмжээ: ${esc(it.size)}`:""} · ${it.qty} ширхэг · ${money(it.price)}</div>`).join("")}
 
     ${o.receipt?`<h3 class="section-sub">🧾 Гүйлгээний баримт</h3>
-      <a href="${esc(o.receipt)}" target="_blank" rel="noopener"><img class="receipt-img" src="${esc(o.receipt)}" alt="баримт"></a>`:""}
+      <img class="receipt-img" src="${esc(o.receipt)}" alt="баримт" onclick="openImg('${esc(o.receipt)}')">
+      <div class="admin-row">
+        ${balance>0&&o.status!=="cancelled"?`<button class="primary" onclick="markPaidFromModal(${o.id})">✅ Төлбөр баталгаажуулах (${money(o.total)})</button>`:`<span class="rc-paid">✓ Бүрэн төлөгдсөн</span>`}
+        <a class="ghost-link" href="${esc(o.receipt)}" target="_blank" rel="noopener">Томоор нээх ↗</a>
+      </div>`:`<p class="muted-note">🧾 Баримт оруулаагүй.</p>`}
 
     <h3 class="section-sub">Засах</h3>
     <div class="admin-row">
@@ -985,7 +993,7 @@ function renderOrdersAdminList(os){
     <div class="orders-table-wrap ord">
       <table class="orders-table ord">
         <thead><tr>
-          <th><input type="checkbox" onchange="toggleSelAll(this.checked)"></th><th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Бараа</th><th>Дүн</th><th>Карго код</th><th>Төлөв</th><th></th>
+          <th><input type="checkbox" onchange="toggleSelAll(this.checked)"></th><th>#</th><th>Код</th><th>Хэрэглэгч</th><th>Бараа</th><th>Дүн</th><th>Баримт</th><th>Карго код</th><th>Төлөв</th><th></th>
         </tr></thead>
         <tbody>
           ${os.map((o,i)=>{
@@ -993,10 +1001,11 @@ function renderOrdersAdminList(os){
             return `<tr>
               <td class="ot-sel"><input type="checkbox" class="ord-sel" ${window.__sel.has(o.id)?"checked":""} onchange="toggleSel(${o.id},this.checked)"></td>
               <td class="ot-num">${i+1}</td>
-              <td class="ot-code">${esc(o.order_code)}${o.receipt?' <span class="has-receipt" title="Баримттай">🧾</span>':''}</td>
-              <td data-l="Хэрэглэгч">${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small></td>
+              <td class="ot-code">${esc(o.order_code)}</td>
+              <td data-l="Хэрэглэгч">${esc(o.customer_name||"—")}<br><small>${esc(o.customer_phone)}</small>${o.address?`<br><small class="ot-addr">📍 ${esc(o.address)}</small>`:""}${o.note?`<br><small class="ot-note">📝 ${esc(o.note)}</small>`:""}</td>
               <td data-l="Бараа" class="ot-items"><small>${(Array.isArray(o.items)?o.items:[]).map(it=>esc(it.name)+(it.size?" ("+esc(it.size)+")":"")+" ×"+it.qty).join(", ")||"—"}</small></td>
               <td data-l="Дүн">${money(o.total)}${balance>0&&o.status!=="cancelled"?`<br><small class="bal-due">үлдэгдэл ${money(balance)}</small> <button type="button" class="mini-pay" onclick="markPaid(${o.id})">Төлсөн</button>`:`<br><small class="bal-ok">${o.status==="cancelled"?"":"төлөгдсөн"}</small>`}</td>
+              <td data-l="Баримт" class="ot-rc">${o.receipt?`<img class="rc-thumb" src="${esc(o.receipt)}" alt="баримт" onclick="openImg('${esc(o.receipt)}')">${balance>0&&o.status!=="cancelled"?`<button type="button" class="rc-ok" onclick="markPaid(${o.id})">✅ Баталгаажуулах</button>`:`<small class="rc-paid">✓ төлөгдсөн</small>`}`:`<small class="rc-none">баримтгүй</small>`}</td>
               <td data-l="Карго код"><input class="cargo-inp" value="${esc(o.cargo_code||"")}" placeholder="код" onchange="saveCargoCode(${o.id},this)"></td>
               <td data-l="Төлөв"><select class="status-sel status-${o.status}" onchange="setOrderStatus(${o.id},this.value,this)">${stOpts(o.status)}</select></td>
               <td class="ot-actions">
@@ -1027,8 +1036,8 @@ function filterOrdersAdmin(){
   const qEl=$("orderSearch");
   const q=(qEl?qEl.value:"").trim().toLowerCase();
   const due=o=>o.status!=="cancelled" && Number(o.total||0)-Number(o.paid||0)>0;
-  const match=o=>f==="all"?true:(f==="unpaid"?due(o):o.status===f);
-  const chips=[["all","Бүгд",all.length],["unpaid","Төлбөр дутуу",all.filter(due).length]].concat(
+  const match=o=>f==="all"?true:(f==="unpaid"?due(o):(f==="receipt"?(due(o)&&!!o.receipt):o.status===f));
+  const chips=[["all","Бүгд",all.length],["receipt","🧾 Баримт шалгах",all.filter(o=>due(o)&&o.receipt).length],["unpaid","Төлбөр дутуу",all.filter(due).length]].concat(
     ["registered","transport","mongolia","delivered","cancelled"].map(s=>[s,STAGE_NAMES[s],all.filter(o=>o.status===s).length]));
   const ce=$("ordFilterChips");
   if(ce) ce.innerHTML=chips.map(([k,l,n])=>`<button type="button" class="fchip ${f===k?"on":""}" onclick="setOrdFilter('${k}')">${l} <b>${n}</b></button>`).join("");
@@ -1395,3 +1404,15 @@ function welcomeGo(what){
   }catch(e){}
   window.addEventListener("load",()=>setTimeout(()=>{ const m=$("welcomeModal"); if(m) m.classList.remove("hidden"); },400));
 })();
+
+/* ---------------- Image lightbox + quick confirm ---------------- */
+function openImg(url){
+  let lb=$("lightbox");
+  if(!lb){ lb=document.createElement("div"); lb.id="lightbox"; lb.className="lightbox"; lb.onclick=()=>lb.classList.add("hidden"); document.body.appendChild(lb); }
+  lb.innerHTML=`<button type="button" class="lb-x">×</button><img src="${url}" alt="">`;
+  lb.classList.remove("hidden");
+}
+async function markPaidFromModal(id){
+  await markPaid(id);
+  const o=(window.__allOrders||[]).find(x=>x.id==id); if(o) openAdminOrderDetail(id);
+}
