@@ -100,8 +100,9 @@ function renderCart(){
 }
 function cargoCalc(){
   const items=cart.filter(x=>!x.cargo_included);
-  const kg=items.reduce((s,x)=>s+(Number(x.weight_kg)||0)*x.qty,0);
-  const missing=items.some(x=>!(Number(x.weight_kg)>0));
+  const rawKg=items.reduce((s,x)=>s+(Number(x.weight_kg)||0)*x.qty,0);
+  const kg=items.length?Math.max(1,rawKg):0; // доод тал нь 1 кг
+  const missing=items.some(x=>!(Number(x.weight_kg)>0)) && rawKg<1;
   const fee=Math.round(kg*CARGO_PER_KG);
   const goods=cart.reduce((s,x)=>s+x.price*x.qty,0);
   const pickup=deliveryMode()==="pickup";
