@@ -1025,3 +1025,17 @@ button.primary:active{opacity:.85;}
 .dc-label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
 .dc-note{margin:6px 0 0;font-size:.82rem;color:var(--muted)}
 #deliveryChoice:disabled{opacity:.8}
+/* admin: receipts, lightbox */
+.rc-thumb{width:56px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;display:block}
+.ot-rc{min-width:92px}
+.rc-ok{display:block;margin-top:4px;padding:4px 6px;font-size:.72rem;border-radius:8px;background:#16a34a!important;color:#fff!important;border:0!important}
+.rc-paid{color:#16a34a;font-size:.75rem;font-weight:700}
+.rc-none{color:var(--muted)}
+.ot-addr,.ot-note{color:var(--muted);display:inline-block;max-width:220px;line-height:1.3}
+.receipt-img{max-width:100%;max-height:360px;border-radius:12px;border:1px solid var(--line);cursor:zoom-in;display:block;margin:6px 0}
+.ghost-link{align-self:center;color:var(--teal);font-size:.85rem}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:12px}
+.lightbox.hidden{display:none}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.lb-x{position:absolute;top:14px;right:16px;font-size:2rem;color:#fff;background:transparent!important;border:0!important}
+@media(max-width:720px){.orders-table.ord td.ot-rc{display:flex;align-items:center;gap:10px}}
