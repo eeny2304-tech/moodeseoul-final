@@ -1039,3 +1039,17 @@ button.primary:active{opacity:.85;}
 .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
 .lb-x{position:absolute;top:14px;right:16px;font-size:2rem;color:#fff;background:transparent!important;border:0!important}
 @media(max-width:720px){.orders-table.ord td.ot-rc{display:flex;align-items:center;gap:10px}}
+
+.mini-btn{padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg-card-2);color:var(--ink);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.forgot-note a{color:var(--teal);font-weight:800}
+
+/* ---------- bottom nav ---------- */
+body{padding-bottom:84px}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:space-around;background:var(--bg-card);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.06)}
+.bn{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:0;color:var(--muted);font-size:.7rem;font-weight:600;cursor:pointer;padding:4px 0}
+.bn.active{color:var(--ink);font-weight:800}
+.bn.active svg{color:var(--pink);stroke-width:2.2}
+.bn-badge{position:absolute;top:0;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:var(--pink);color:#fff;font-style:normal;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.chat-fab{bottom:88px !important}
+@media(min-width:900px){.bottom-nav{max-width:520px;left:50%;right:auto;transform:translateX(-50%);border-radius:18px 18px 0 0}}
+#shopSec,#trackSec{scroll-margin-top:90px}
