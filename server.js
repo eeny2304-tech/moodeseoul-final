@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -23,7 +24,9 @@ app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(UPLOAD_DIR));
-app.use(express.static(__dirname, { index: "index.html" }));
+app.use(express.static(__dirname, { index: "index.html", etag: true, setHeaders(res, p){
+  if (/\.(html|js|css|json)$/i.test(p)) res.set("Cache-Control", "no-cache, must-revalidate"); // шинэчлэлт шууд харагдана
+}}));
 
 const usePostgres = !!process.env.DATABASE_URL;
 const pool = usePostgres ? new Pool({
@@ -209,6 +212,7 @@ async function listProducts(admin=false) {
   const rows = (await pool.query(q)).rows;
   return rows.map(p => ({...p, sizes: parseSizes(p.sizes), images: parseImages(p.images)}));
 }
+function cleanOld(o,price){ o=Number(o)||0; price=Number(price)||0; return o>price&&price>0?Math.round(o):0; }
 async function createProduct(p) {
   const sizes = parseSizes(p.sizes);
   const images = parseImages(p.images);
@@ -216,12 +220,12 @@ async function createProduct(p) {
   const stock = sizes.length ? totalFromSizes(sizes) : (Number(p.stock) || 0);
   if (!usePostgres) {
     const d=loadJson(); const id=(d.products[0]?.id||0)+1;
-    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",old_price:Number(p.old_price)||0,cargo_included:!!p.cargo_included,featured:!!p.featured,weight_kg:Number(p.weight_kg)||0,active:p.active!==false,sizes};
+    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",old_price:cleanOld(p.old_price,p.price),cargo_included:!!p.cargo_included,featured:!!p.featured,weight_kg:Number(p.weight_kg)||0,active:p.active!==false,sizes};
     d.products.push(item); saveJson(d); return item;
   }
   return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,brand,image,images,pickup,active,sizes,old_price,cargo_included,featured,weight_kg)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),Number(p.old_price)||0,!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0])).rows[0];
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0])).rows[0];
 }
 async function updateProduct(id,p) {
   const sizes = parseSizes(p.sizes);
@@ -230,11 +234,11 @@ async function updateProduct(id,p) {
   const stock = sizes.length ? totalFromSizes(sizes) : Number(p.stock)||0;
   if (!usePostgres) {
     const d=loadJson(), i=d.products.findIndex(x=>x.id==id); if(i<0) throw Error("Product not found");
-    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",old_price:Number(p.old_price??d.products[i].old_price??0)||0,cargo_included:!!(p.cargo_included??d.products[i].cargo_included),featured:!!(p.featured??d.products[i].featured),weight_kg:Number(p.weight_kg??d.products[i].weight_kg??0)||0,sizes};
+    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",old_price:cleanOld(p.old_price??d.products[i].old_price??0,p.price??d.products[i].price),cargo_included:!!(p.cargo_included??d.products[i].cargo_included),featured:!!(p.featured??d.products[i].featured),weight_kg:Number(p.weight_kg??d.products[i].weight_kg??0)||0,sizes};
     saveJson(d); return d.products[i];
   }
   return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,brand=$7,image=$8,images=$9,pickup=$10,active=$11,sizes=$12,old_price=$13,cargo_included=$14,featured=$15,weight_kg=$16 WHERE id=$17 RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),Number(p.old_price)||0,!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0,id])).rows[0];
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0,id])).rows[0];
 }
 async function deleteProduct(id) {
   if (!usePostgres) { const d=loadJson(); d.products=d.products.filter(x=>x.id!=id); saveJson(d); return; }
@@ -586,6 +590,16 @@ app.get("/api/admin/settings", auth("admin"), async (_,res)=>res.json(await getS
 app.put("/api/admin/settings", auth("admin"), async (req,res)=>res.json(await setSettings(req.body)));
 
 app.get("/api/admin/customers", auth("admin"), async (_,res)=>res.json(await listCustomers()));
+// Admin resets a customer's forgotten password: generates a temporary one, shown once to the admin.
+app.post("/api/admin/customers/reset-password", auth("admin"), async (req,res)=>{
+  const phone=normalizePhone(req.body.phone);
+  if(phone.length<8) return res.status(400).json({error:"Утасны дугаар буруу"});
+  const acc=await getCustomerAccount(phone);
+  if(!acc) return res.status(404).json({error:"Хэрэглэгч олдсонгүй"});
+  const temp=String(crypto.randomInt(100000,1000000));
+  await saveCustomerAccount(phone,"",await bcrypt.hash(temp,10));
+  res.json({phone,password:temp});
+});
 
 app.get("/api/admin/stats", auth("admin"), async (_,res)=>{
   const orders=await allOrders();
