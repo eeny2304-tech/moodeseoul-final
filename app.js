@@ -1069,12 +1069,20 @@ function renderCustomersTable(list){
   if(!list.length) return `<p class="muted-note">Хэрэглэгч алга байна.</p>`;
   return `<div class="orders-table-wrap">
     <table class="orders-table">
-      <thead><tr><th>#</th><th>Утасны дугаар</th><th>Нэр</th></tr></thead>
+      <thead><tr><th>#</th><th>Утасны дугаар</th><th>Нэр</th><th></th></tr></thead>
       <tbody>
-        ${list.map((c,i)=>`<tr><td>${i+1}</td><td class="ot-code">${esc(c.phone)}</td><td>${esc(c.name||"—")}</td></tr>`).join("")}
+        ${list.map((c,i)=>`<tr><td>${i+1}</td><td class="ot-code">${esc(c.phone)}</td><td>${esc(c.name||"—")}</td><td><button class="mini-btn" onclick="resetCustPass('${esc(c.phone)}')">🔑 Нууц үг сэргээх</button></td></tr>`).join("")}
       </tbody>
     </table>
   </div>`;
+}
+
+async function resetCustPass(phone){
+  if(!confirm(phone+" дугаарын нууц үгийг шинэчлэх үү?")) return;
+  try{
+    const d=await api("/api/admin/customers/reset-password",{method:"POST",body:JSON.stringify({phone})});
+    alert("Шинэ түр нууц үг: "+d.password+"\n\nХэрэглэгчид илгээнэ үү. Нэвтэрсний дараа солихыг хэлээрэй.");
+  }catch(e){ alert(e.message); }
 }
 
 function filterCustomers(){
@@ -1264,7 +1272,7 @@ function refreshAuthUi(){
   } else authMode(authModeNow);
   const b=$("userBtn"); if(b) b.classList.toggle("logged-in",on);
   const l=$("userBtnLabel"); if(l) l.textContent=on?(user.name||user.phone):"Нэвтрэх";
-  const cta=$("loginCta"); if(cta) cta.classList.toggle("hidden",on);
+  const cta=$("loginCta"); if(cta) cta.classList.add("hidden");
 }
 async function submitAuth(){
   const phone=$("authPhone").value.trim(), password=$("authPass").value, name=$("authName").value.trim();
