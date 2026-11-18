@@ -60,7 +60,7 @@
   <div class="hero-card"><b>Хүргэлт</b><strong id="groundDays">12-14 хоног</strong><span>Мягмар, Баасан гаригт өгнө</span></div>
 </section>
 
-<section class="theme-dark">
+<section class="theme-dark" id="shopSec">
   <div class="section-title"><h2>Бараа</h2><button onclick="loadProducts()">Шинэчлэх ↻</button></div>
   <div class="type-tabs" id="typeTabs">
     <button class="type-tab active" data-type="ready" onclick="setType(this)">🛍️ Бэлэн бараа</button>
@@ -83,7 +83,7 @@
   <button class="primary" onclick="openAuth()">Нэвтрэх / Бүртгүүлэх</button>
 </section>
 
-<section class="track track-accent">
+<section class="track track-accent" id="trackSec">
   <p class="track-label">📞 Захиалгаа хянах</p>
   <input id="trackInput" placeholder="Утасны дугаараа оруулна уу">
   <button class="primary" onclick="trackOrders()">Хайх →</button>
@@ -317,10 +317,16 @@
   </div>
 </div>
 
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bn active" data-bn="home" onclick="navTo('home')"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>Нүүр</span></button>
+  <button class="bn" data-bn="shop" onclick="navTo('shop')"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 016 0"/></svg><span>Бараа үзэх</span></button>
+  <button class="bn" data-bn="track" onclick="navTo('track')"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 4-2"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/><circle cx="18" cy="17" r="2.5"/><path d="M20 19l2 2"/></svg><span>Ачаа хайх</span></button>
+  <button class="bn" data-bn="cart" onclick="openCart()"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 11h11L21 7H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg><span>Сагс</span><i class="bn-badge hidden" id="bnCount">0</i></button>
+</nav>
 <a class="chat-fab" href="https://www.facebook.com/share/1DfrwygWEK/?mibextid=wwXIfr" aria-label="Мессеж бичих">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 2C6.3 2 2 6.2 2 11.6c0 3 1.4 5.7 3.7 7.4v3.6l3.4-1.9c.9.25 1.9.4 2.9.4 5.7 0 10-4.2 10-9.5S17.7 2 12 2Zm1 12.3-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7Z"/></svg>
 </a>
-<button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
+<button class="cart-fab hidden" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
 
 <footer class="site-footer">
   <div class="footer-grid">
