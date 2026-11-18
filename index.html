@@ -34,7 +34,7 @@
 <header class="top">
   <img class="logo" src="/IMG_8588.jpeg" alt="MOODE SEOUL" onerror="this.outerHTML='&lt;div class=&quot;logo logo-fallback&quot;&gt;MS&lt;/div&gt;'">
   <div class="brand"><b id="brandName">MOODE SEOUL</b><span>🇰🇷 → 🇲🇳</span></div>
-  <button class="login-pill" id="userBtn" onclick="openAuth()"><span class="lp-ico">👤</span><span id="userBtnLabel">Нэвтрэх</span></button>
+  <button class="login-pill hidden" id="userBtn" onclick="openAuth()"><span class="lp-ico">👤</span><span id="userBtnLabel">Нэвтрэх</span></button>
   <button class="icon" onclick="openAdmin()">☰</button>
 </header>
 <div class="announce" id="announce"></div>
@@ -78,7 +78,7 @@
   <div id="products"></div>
 </section>
 
-<section class="login-cta" id="loginCta">
+<section class="login-cta hidden" id="loginCta" style="display:none">
   <div><b>Бүртгэл үүсгэж нэвтэрвэл</b><span>захиалгаа нэг дор хянаж, дараагийн захиалгад нэр утсаа дахин бичихгүй.</span></div>
   <button class="primary" onclick="openAuth()">Нэвтрэх / Бүртгүүлэх</button>
 </section>
@@ -237,6 +237,7 @@
       <input id="authPass" type="password" placeholder="Нууц үг (6+ тэмдэгт)" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
       <button class="primary" id="authSubmit" onclick="submitAuth()">Нэвтрэх</button>
       <p class="muted-note">Шинэ бол "Бүртгүүлэх" дээр дараад утас, нууц үгээ сонгоно. Өмнө захиалга өгч байсан бол тэр утасны дугаараараа бүртгүүлж, захиалгуудаа шууд харна.</p>
+      <p class="muted-note forgot-note">🔑 Нууц үгээ мартсан уу? <a href="https://www.facebook.com/share/1DfrwygWEK/?mibextid=wwXIfr" target="_blank" rel="noopener">Facebook</a> дээр бидэнд бичвэл шинэ нууц үг өгнө.</p>
     </div>
     <div id="authLoggedIn" class="hidden">
       <p class="auth-hello">Сайн байна уу, <b id="authUserName"></b></p>
