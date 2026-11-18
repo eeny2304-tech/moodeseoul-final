@@ -191,6 +191,7 @@ function updateCheckoutMode(){
       : (dc.value==="pickup" ? "📍 Oneway cargo, 3-р эмнэлгийн хажууд очиж авна. Хүргэлтийн 9,000₮ төлөхгүй." : "");
   }
   const pickupNow = isCargo && deliveryMode()==="pickup";
+  {const pc=$("pickupCard"); if(pc) pc.classList.toggle("hidden",!pickupNow);}
   $("customerAddress").classList.toggle("hidden", pickupNow);
   $("deliveryNote").classList.toggle("hidden", mode !== "mn_direct");
 
