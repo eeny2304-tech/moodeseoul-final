@@ -1053,3 +1053,10 @@ body{padding-bottom:84px}
 .chat-fab{bottom:88px !important}
 @media(min-width:900px){.bottom-nav{max-width:520px;left:50%;right:auto;transform:translateX(-50%);border-radius:18px 18px 0 0}}
 #shopSec,#trackSec{scroll-margin-top:90px}
+
+.pickup-card{margin-top:10px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--bg-card-2)}
+.pk-head{background:var(--grad);color:#0b0b0e;font-weight:800;padding:10px 14px;font-size:.9rem}
+.pk-row{display:flex;flex-direction:column;gap:3px;padding:10px 14px;border-top:1px solid var(--line);font-size:.85rem}
+.pk-row:first-of-type{border-top:0}
+.pk-row b{font-size:.75rem;color:var(--muted)}
+.pk-row a{color:var(--teal);font-weight:800;text-decoration:none}
