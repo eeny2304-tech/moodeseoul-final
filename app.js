@@ -88,14 +88,14 @@ function addCart(id){
   renderCart(); openCart();
 }
 
-// X = анхны үнэ, Y = хямдралын хувь → хямдарсан үнэ = X*(1-Y/100). Хувь хоосон бол хямдралгүй.
+// Үнэ = хямдарсан (зарах) үнэ, Y = хямдралын хувь → анхны үнэ = үнэ/(1-Y/100). Хувь хоосон бол хямдралгүй.
 function applySale(x,y){
   const X=Number(x)||0, p=parseFloat(String(y||"").replace("%","").replace(",","."));
-  if(X>0 && p>0 && p<100) return {price:Math.round(X*(1-p/100)/100)*100, old_price:X};
+  if(X>0 && p>0 && p<100) return {price:X, old_price:Math.round(X/(1-p/100)/100)*100};
   return {price:X, old_price:0};
 }
 function pctFromOld(p){ return salePct(p)||""; }
-function baseFromProd(p){ return salePct(p)>0?p.old_price:p.price; }
+function baseFromProd(p){ return p.price; }
 function renderCart(){
   saveCart();
   setTimeout(()=>{ if(typeof updateCheckoutMode==="function") updateCheckoutMode(); },0);
@@ -705,9 +705,9 @@ async function adminTab(tab){
         <div class="admin-card">
           <div class="admin-row">
             <input id="pn" placeholder="Барааны нэр">
-            <input id="pp" type="number" placeholder="Анхны үнэ ₮">
+            <input id="pp" type="number" placeholder="Зарах үнэ ₮ (хямдарсан)">
             <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
-            <input id="pold" type="number" inputmode="decimal" min="0" max="99" placeholder="Хямдралын хувь % (жиш: 30) — хямдарсан үнийг сайт бодно">
+            <input id="pold" type="number" inputmode="decimal" min="0" max="99" placeholder="Хямдрал % (жиш: 30)">
             <input id="pw" type="number" step="0.1" placeholder="Жин кг (жиш: 1.5) — картын тооцоонд">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
@@ -844,11 +844,11 @@ function renderAdminProductsList(ps){
     return `<div class="admin-card admin-card-row ${out?'is-out':''}">
       ${p.image?`<img class="admin-thumb" src="${p.image}">`:`<div class="admin-thumb admin-thumb-empty">MS</div>`}
       <div>
-        <b>${esc(p.name)}</b> — ${money(p.price)}
+        <b>${esc(p.name)}</b> — ${money(p.price)}${salePct(p)>0?` <s class="old-price">${money(p.old_price)}</s> <span class="sale-pill">−${salePct(p)}%</span>`:""}
         <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
         <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}${p.brand?" · "+esc(BRAND_LABELS[p.brand]||p.brand):""}</small>
         ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
-        <br><span class="tog-row"><button class="tog ${p.featured?"on":""}" onclick="toggleProd(${p.id},'featured')">🔥 Онцлох</button><button class="tog ${p.cargo_included?"on":""}" onclick="toggleProd(${p.id},'cargo_included')">Карго орсон</button><button class="tog ${salePct(p)>0?"on":""}" onclick="setOldPrice(${p.id})">${salePct(p)>0?"Хямдрал −"+salePct(p)+"%":"Хямдрал"}</button></span><br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+        <br><span class="tog-row"><button class="tog ${p.featured?"on":""}" onclick="toggleProd(${p.id},'featured')">🔥 Онцлох</button><button class="tog ${p.cargo_included?"on":""}" onclick="toggleProd(${p.id},'cargo_included')">Карго орсон</button><button class="tog ${salePct(p)>0?"on":""}" onclick="setOldPrice(${p.id})">${salePct(p)>0?"Хямдрал −"+salePct(p)+"% · анхны "+money(p.old_price):"Хямдрал"}</button></span><br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
       </div>
     </div>`;
   }).join("") : `<p class="muted-note">Бараа олдсонгүй.</p>`;
@@ -1344,7 +1344,7 @@ async function toggleProd(id,key){
 }
 async function setOldPrice(id){
   const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
-  const v=prompt("Хэдэн хувиар хямдруулсан бэ? (жиш: 30). Анхны үнэ "+money(baseFromProd(p))+". Хямдралыг арилгах бол 0 оруулна.", salePct(p)||"");
+  const v=prompt("Хэдэн хувиар хямдруулсан бэ? (жиш: 30). Одоогийн үнэ "+money(p.price)+". Хямдралыг арилгах бол 0 оруулна.", salePct(p)||"");
   if(v===null) return;
   try{
     await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,...applySale(baseFromProd(p),v)})});
