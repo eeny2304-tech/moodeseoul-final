@@ -92,6 +92,7 @@ function renderCart(){
   saveCart();
   setTimeout(()=>{ if(typeof updateCheckoutMode==="function") updateCheckoutMode(); },0);
   $("cartCount").textContent=cart.reduce((s,x)=>s+x.qty,0);
+  {const b=$("bnCount"),n=cart.reduce((s,x)=>s+x.qty,0); if(b){b.textContent=n; b.classList.toggle("hidden",!n);}}
   const thumb=x=>{const im=(Array.isArray(x.images)&&x.images[0])||x.image||"";return im?`<img class="ci-img" src="${im}" alt="">`:`<div class="ci-img ci-ph"></div>`;};
   setTimeout(()=>{ if(typeof renderPayBlock==="function") renderPayBlock(); },0);
   $("cartItems").innerHTML=cart.length
@@ -1425,3 +1426,17 @@ async function markPaidFromModal(id){
   await markPaid(id);
   const o=(window.__allOrders||[]).find(x=>x.id==id); if(o) openAdminOrderDetail(id);
 }
+
+// ---------- bottom nav ----------
+function navTo(k){
+  if(k==="home"){ window.scrollTo({top:0,behavior:"smooth"}); }
+  else { const el=$(k==="shop"?"shopSec":"trackSec"); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); if(k==="track"){ setTimeout(()=>{const i=$("trackInput"); if(i) i.focus({preventScroll:true});},500); } }
+  setBn(k);
+}
+function setBn(k){ document.querySelectorAll("#bottomNav .bn").forEach(b=>b.classList.toggle("active",b.dataset.bn===k)); }
+window.addEventListener("scroll",()=>{
+  const sh=$("shopSec"),tr=$("trackSec"); if(!sh||!tr) return;
+  const y=window.innerHeight*0.45;
+  const k=tr.getBoundingClientRect().top<y?"track":(sh.getBoundingClientRect().top<y?"shop":"home");
+  setBn(k);
+},{passive:true});
