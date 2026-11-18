@@ -88,6 +88,17 @@ function addCart(id){
   renderCart(); openCart();
 }
 
+// "30%" гэж бичвэл хуучин үнийг одоогийн үнээс автоматаар бодно; тоо бичвэл шууд хуучин үнэ.
+function oldFromInput(price,v){
+  v=String(v||"").trim().replace(",",".");
+  if(!v) return "";
+  if(v.endsWith("%")){
+    const p=parseFloat(v), pr=Number(price)||0;
+    if(!(p>0&&p<100)||!pr) return "";
+    return String(Math.round(pr/(1-p/100)/100)*100);
+  }
+  return v;
+}
 function renderCart(){
   saveCart();
   setTimeout(()=>{ if(typeof updateCheckoutMode==="function") updateCheckoutMode(); },0);
@@ -699,7 +710,7 @@ async function adminTab(tab){
             <input id="pn" placeholder="Барааны нэр">
             <input id="pp" type="number" placeholder="Үнэ ₮">
             <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
-            <input id="pold" type="number" placeholder="Хуучин үнэ ₮ (хямдрал харуулах бол)">
+            <input id="pold" type="text" inputmode="decimal" placeholder="Хямдрал: хуучин үнэ ₮ эсвэл % (жиш: 30%)">
             <input id="pw" type="number" step="0.1" placeholder="Жин кг (жиш: 1.5) — картын тооцоонд">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
@@ -1124,7 +1135,7 @@ async function addProduct(){
     image:pendingImages[0]||"",
     images:pendingImages,
     pickup:$("ppickup").value,
-    old_price:$("pold").value,
+    old_price:oldFromInput($("pp").value,$("pold").value),
     weight_kg:$("pw").value,
     cargo_included:$("pcargo").checked,
     featured:$("pfeat").checked,
@@ -1182,7 +1193,7 @@ async function saveEditProduct(){
   const orig=(window.__allProducts||[]).find(x=>x.id==editingProductId)||{};
   try{
     await api("/api/admin/products/"+editingProductId,{method:"PUT",body:JSON.stringify({...orig,
-      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:$("e_old").value,weight_kg:$("e_weight").value,
+      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:oldFromInput($("e_price").value,$("e_old").value),weight_kg:$("e_weight").value,
       category:$("e_cat").value,brand:$("e_brand").value,pickup:$("e_pickup").value,description:$("e_desc").value,
       cargo_included:$("e_cargo").checked,featured:$("e_feat").checked,
       image:editImages[0]||"",images:editImages,sizes,stock})});
