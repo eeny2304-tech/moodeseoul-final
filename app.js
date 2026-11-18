@@ -88,17 +88,14 @@ function addCart(id){
   renderCart(); openCart();
 }
 
-// "30%" гэж бичвэл хуучин үнийг одоогийн үнээс автоматаар бодно; тоо бичвэл шууд хуучин үнэ.
-function oldFromInput(price,v){
-  v=String(v||"").trim().replace(",",".");
-  if(!v) return "";
-  if(v.endsWith("%")){
-    const p=parseFloat(v), pr=Number(price)||0;
-    if(!(p>0&&p<100)||!pr) return "";
-    return String(Math.round(pr/(1-p/100)/100)*100);
-  }
-  return v;
+// X = анхны үнэ, Y = хямдралын хувь → хямдарсан үнэ = X*(1-Y/100). Хувь хоосон бол хямдралгүй.
+function applySale(x,y){
+  const X=Number(x)||0, p=parseFloat(String(y||"").replace("%","").replace(",","."));
+  if(X>0 && p>0 && p<100) return {price:Math.round(X*(1-p/100)/100)*100, old_price:X};
+  return {price:X, old_price:0};
 }
+function pctFromOld(p){ return salePct(p)||""; }
+function baseFromProd(p){ return salePct(p)>0?p.old_price:p.price; }
 function renderCart(){
   saveCart();
   setTimeout(()=>{ if(typeof updateCheckoutMode==="function") updateCheckoutMode(); },0);
@@ -708,9 +705,9 @@ async function adminTab(tab){
         <div class="admin-card">
           <div class="admin-row">
             <input id="pn" placeholder="Барааны нэр">
-            <input id="pp" type="number" placeholder="Үнэ ₮">
+            <input id="pp" type="number" placeholder="Анхны үнэ ₮">
             <input id="pkrw" type="number" placeholder="Үнэ ₩ (заавал биш)">
-            <input id="pold" type="text" inputmode="decimal" placeholder="Хямдрал: хуучин үнэ ₮ эсвэл % (жиш: 30%)">
+            <input id="pold" type="number" inputmode="decimal" min="0" max="99" placeholder="Хямдралын хувь % (жиш: 30) — хямдарсан үнийг сайт бодно">
             <input id="pw" type="number" step="0.1" placeholder="Жин кг (жиш: 1.5) — картын тооцоонд">
             <select id="pc">
               <option value="mn_belen">Монголд бэлэн</option>
@@ -851,7 +848,7 @@ function renderAdminProductsList(ps){
         <span class="stock-pill ${out?'stock-out':'stock-in'}">${out?'Дууссан':'Үлдэгдэл '+p.stock}</span><br>
         <small>${esc(CATEGORY_LABELS[p.category]||p.category||"Ангилалгүй")}${p.brand?" · "+esc(BRAND_LABELS[p.brand]||p.brand):""}</small>
         ${p.sizes && p.sizes.length ? `<br><small>Хэмжээ: ${p.sizes.map(s=>`${esc(s.size)}(${s.qty})`).join(", ")}</small>` : ""}
-        <br><span class="tog-row"><button class="tog ${p.featured?"on":""}" onclick="toggleProd(${p.id},'featured')">🔥 Онцлох</button><button class="tog ${p.cargo_included?"on":""}" onclick="toggleProd(${p.id},'cargo_included')">Карго орсон</button><button class="tog ${Number(p.old_price)>0?"on":""}" onclick="setOldPrice(${p.id})">${Number(p.old_price)>0?"Хямдрал −"+salePct(p)+"%":"Хямдрал"}</button></span><br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
+        <br><span class="tog-row"><button class="tog ${p.featured?"on":""}" onclick="toggleProd(${p.id},'featured')">🔥 Онцлох</button><button class="tog ${p.cargo_included?"on":""}" onclick="toggleProd(${p.id},'cargo_included')">Карго орсон</button><button class="tog ${salePct(p)>0?"on":""}" onclick="setOldPrice(${p.id})">${salePct(p)>0?"Хямдрал −"+salePct(p)+"%":"Хямдрал"}</button></span><br><button onclick="editProduct(${p.id})">Засах</button> <button onclick="duplicateProduct(${p.id})">Хуулах</button> <button onclick="deleteProduct(${p.id})">Устгах</button>
       </div>
     </div>`;
   }).join("") : `<p class="muted-note">Бараа олдсонгүй.</p>`;
@@ -1127,7 +1124,7 @@ async function addProduct(){
   if(!$("pn").value.trim()) return alert("Барааны нэр оруулна уу.");
   try{ await api(url,{method,body:JSON.stringify({
     name:$("pn").value,
-    price:$("pp").value,
+    ...applySale($("pp").value,$("pold").value),
     price_krw:$("pkrw").value,
     stock,
     category:$("pc").value,
@@ -1135,7 +1132,6 @@ async function addProduct(){
     image:pendingImages[0]||"",
     images:pendingImages,
     pickup:$("ppickup").value,
-    old_price:oldFromInput($("pp").value,$("pold").value),
     weight_kg:$("pw").value,
     cargo_included:$("pcargo").checked,
     featured:$("pfeat").checked,
@@ -1151,7 +1147,7 @@ function openEditProduct(id){
   const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
   editingProductId=id;
   const set=(k,v)=>{ $("e_"+k).value=v??""; };
-  set("name",p.name); set("price",p.price); set("krw",p.price_krw||""); set("old",Number(p.old_price)>0?p.old_price:""); set("weight",p.weight_kg>0?p.weight_kg:"");
+  set("name",p.name); set("price",baseFromProd(p)); set("krw",p.price_krw||""); set("old",pctFromOld(p)); set("weight",p.weight_kg>0?p.weight_kg:"");
   set("cat",p.category||"order"); set("brand",p.brand||""); set("pickup",p.pickup||""); set("desc",p.description||"");
   $("e_cargo").checked=!!p.cargo_included; $("e_feat").checked=!!p.featured;
   $("e_sizes").innerHTML="";
@@ -1193,7 +1189,7 @@ async function saveEditProduct(){
   const orig=(window.__allProducts||[]).find(x=>x.id==editingProductId)||{};
   try{
     await api("/api/admin/products/"+editingProductId,{method:"PUT",body:JSON.stringify({...orig,
-      name,price:$("e_price").value,price_krw:$("e_krw").value,old_price:oldFromInput($("e_price").value,$("e_old").value),weight_kg:$("e_weight").value,
+      name,...applySale($("e_price").value,$("e_old").value),price_krw:$("e_krw").value,weight_kg:$("e_weight").value,
       category:$("e_cat").value,brand:$("e_brand").value,pickup:$("e_pickup").value,description:$("e_desc").value,
       cargo_included:$("e_cargo").checked,featured:$("e_feat").checked,
       image:editImages[0]||"",images:editImages,sizes,stock})});
@@ -1348,10 +1344,10 @@ async function toggleProd(id,key){
 }
 async function setOldPrice(id){
   const p=(window.__allProducts||[]).find(x=>x.id==id); if(!p) return;
-  const v=prompt("Хуучин үнэ ₮ (одоогийн үнэ "+money(p.price)+"). Хямдралыг арилгах бол 0 оруулна.", p.old_price||"");
+  const v=prompt("Хэдэн хувиар хямдруулсан бэ? (жиш: 30). Анхны үнэ "+money(baseFromProd(p))+". Хямдралыг арилгах бол 0 оруулна.", salePct(p)||"");
   if(v===null) return;
   try{
-    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,old_price:Number(v)||0})});
+    await api("/api/admin/products/"+id,{method:"PUT",body:JSON.stringify({...p,...applySale(baseFromProd(p),v)})});
     adminTab("products"); loadProducts();
   }catch(e){ alert(e.message); }
 }
