@@ -256,6 +256,7 @@ function openProductModal(id, skipUrl){
     </div>
     <button class="primary" ${totalStock<=0?"disabled":""} onclick="addCartFromModal(${p.id})">${totalStock<=0?"Дууссан":"Сагсанд нэмэх"}</button>
     <button class="share-btn" onclick="shareProduct(${p.id})">🔗 Линк хуваалцах</button>
+    <button class="share-btn" onclick="shareStory(${p.id})">📸 Story / Постын зураг</button>
   `;
   pmSelectedSize = sizes.length ? (sizes.find(s=>Number(s.qty)>0)?.size ?? null) : null;
   // pre-select the first in-stock size so "Сагсанд нэмэх" always works
@@ -293,7 +294,7 @@ function closeProductModal(){
 
 function shareProduct(id){
   const p = products.find(x=>x.id==id);
-  const url = location.origin + "/?p=" + id;
+  const url = location.origin + "/p/" + id;
   const title = p ? p.name : "MOODE SEOUL";
   if(navigator.share){
     navigator.share({ title, text: title + " — MOODE SEOUL", url }).catch(()=>{});
@@ -305,7 +306,8 @@ function shareProduct(id){
 
 // open a product automatically when the page is loaded with ?p=<id>
 function openProductFromUrl(){
-  const id = new URLSearchParams(location.search).get("p");
+  const m = location.pathname.match(/^\/p\/(\d+)/);
+  const id = new URLSearchParams(location.search).get("p") || (m && m[1]);
   if(!id) return;
   const exists = products.find(x=>String(x.id)===String(id));
   if(exists) openProductModal(Number(id), true);
@@ -1416,7 +1418,7 @@ function welcomeGo(what){
 }
 (function(){
   try{
-    if(new URLSearchParams(location.search).get("p")) return;
+    if(new URLSearchParams(location.search).get("p")||/^\/p\/\d+/.test(location.pathname)) return;
     if(sessionStorage.getItem("moode_welcome")) return;
     sessionStorage.setItem("moode_welcome","1");
   }catch(e){}
@@ -1448,3 +1450,58 @@ window.addEventListener("scroll",()=>{
   const k=tr.getBoundingClientRect().top<y?"track":(sh.getBoundingClientRect().top<y?"shop":"home");
   setBn(k);
 },{passive:true});
+
+// ---------- Story / Post зураг үүсгэх (Instagram, Facebook) ----------
+function loadImg(src){ return new Promise((ok,no)=>{ const i=new Image(); i.crossOrigin="anonymous"; i.onload=()=>ok(i); i.onerror=no; i.src=src; }); }
+function wrapText(ctx,text,x,y,maxW,lh,maxLines){
+  const words=String(text).split(/\s+/); let line="", n=0;
+  for(const w of words){
+    const t=line?line+" "+w:w;
+    if(ctx.measureText(t).width>maxW && line){ ctx.fillText(line,x,y); y+=lh; line=w; if(++n>=maxLines-1){ break; } } else line=t;
+  }
+  if(n<maxLines) ctx.fillText(line,x,y);
+  return y+lh;
+}
+async function makeStoryCanvas(p, w, h){
+  const c=document.createElement("canvas"); c.width=w; c.height=h; const ctx=c.getContext("2d");
+  const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,"#0f1a1f"); g.addColorStop(1,"#1d1030"); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  const S=w/1080;
+  ctx.fillStyle="#fff"; ctx.font=`800 ${52*S}px Montserrat, Arial, sans-serif`; ctx.textAlign="center";
+  ctx.fillText("MOODE SEOUL", w/2, 110*S);
+  ctx.fillStyle="#9fb3bd"; ctx.font=`600 ${30*S}px Arial, sans-serif`; ctx.fillText("🇰🇷 Солонгосоос  →  Монгол 🇲🇳", w/2, 160*S);
+  // photo
+  const pad=70*S, box=w-pad*2, top=210*S, boxH=Math.max(box, h-top-560*S);
+  const src=p.image||(Array.isArray(p.images)&&p.images[0])||"";
+  ctx.save(); ctx.beginPath(); ctx.roundRect(pad,top,box,boxH,40*S); ctx.clip(); ctx.fillStyle="#222"; ctx.fillRect(pad,top,box,boxH);
+  try{ const im=await loadImg(src); const r=Math.max(box/im.width,boxH/im.height); const dw=im.width*r, dh=im.height*r; ctx.drawImage(im,pad+(box-dw)/2,top+(boxH-dh)/2,dw,dh); }catch(_){}
+  ctx.restore();
+  const pct=salePct(p);
+  if(pct){ ctx.fillStyle="#e11d48"; ctx.beginPath(); ctx.roundRect(pad+30*S,top+30*S,230*S,96*S,48*S); ctx.fill(); ctx.fillStyle="#fff"; ctx.font=`800 ${56*S}px Arial, sans-serif`; ctx.textAlign="center"; ctx.fillText("−"+pct+"%",pad+145*S,top+98*S); }
+  // text
+  let y=top+boxH+95*S; ctx.textAlign="left"; ctx.fillStyle="#fff"; ctx.font=`800 ${58*S}px Arial, sans-serif`;
+  y=wrapText(ctx,p.name,pad,y,box,70*S,2);
+  ctx.font=`800 ${86*S}px Arial, sans-serif`; const grad=ctx.createLinearGradient(pad,0,pad+500*S,0); grad.addColorStop(0,"#2dd4bf"); grad.addColorStop(1,"#ec4899"); ctx.fillStyle=grad;
+  const priceTxt=Number(p.price).toLocaleString("en-US")+"₮"; ctx.fillText(priceTxt,pad,y+20*S);
+  if(pct){ const pw=ctx.measureText(priceTxt).width; ctx.font=`600 ${44*S}px Arial, sans-serif`; ctx.fillStyle="#9fb3bd"; const ot=Number(p.old_price).toLocaleString("en-US")+"₮"; ctx.fillText(ot,pad+pw+30*S,y+20*S); const ow=ctx.measureText(ot).width; ctx.fillRect(pad+pw+30*S,y+6*S,ow,4*S); }
+  // footer
+  ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font=`700 ${38*S}px Arial, sans-serif`; ctx.fillText("moodeseoul.com/p/"+p.id, w/2, h-120*S);
+  ctx.fillStyle="#9fb3bd"; ctx.font=`500 ${28*S}px Arial, sans-serif`; ctx.fillText("Захиалах: moodeseoul.com", w/2, h-70*S);
+  return c;
+}
+async function shareStory(id){
+  const p=products.find(x=>x.id==id); if(!p) return;
+  const btn=event&&event.target; if(btn) btn.disabled=true;
+  try{
+    // Story 1080x1920 (Instagram / Facebook story)
+    const c=await makeStoryCanvas(p,1080,1920);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.92));
+    const file=new File([blob],"moodeseoul-"+p.id+".jpg",{type:"image/jpeg"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:p.name, text:p.name+"\n"+location.origin+"/p/"+p.id}).catch(()=>{});
+    } else {
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+      alert("Зураг татагдлаа. Instagram/Facebook дээр Story-доо оруулаад линк sticker-т ийм линк тавина:\n"+location.origin+"/p/"+p.id);
+    }
+  }catch(e){ alert("Зураг үүсгэхэд алдаа гарлаа. Дахин оролдоно уу."); }
+  if(btn) btn.disabled=false;
+}
