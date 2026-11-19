@@ -24,6 +24,36 @@ app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(UPLOAD_DIR));
+
+// ---- Бараа бүрийн линк: Facebook / Instagram / Messenger дээр хуваалцахад барааны зураг, нэр, үнэ харагдана ----
+const SITE_URL = (process.env.SITE_URL || "https://moodeseoul.com").replace(/\/$/, "");
+const escAttr = v => String(v ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+async function renderProductPage(req, res, id){
+  try{
+    const fs = require("fs");
+    let html = fs.readFileSync(require("path").join(__dirname, "index.html"), "utf8");
+    const p = (await listProducts(false)).find(x => String(x.id) === String(id));
+    if(p){
+      const price = Number(p.price)||0, old = Number(p.old_price)||0;
+      const pct = old>price && price>0 ? Math.round((1-price/old)*100) : 0;
+      const money = n => Number(n).toLocaleString("en-US") + "₮";
+      const title = `${p.name} — ${money(price)}${pct?` (−${pct}%)`:""} | MOODE SEOUL`;
+      const desc = (String(p.description||"").replace(/\s+/g," ").trim().slice(0,160)) || "Солонгосоос шууд захиалга — MOODE SEOUL 🇰🇷✈️🇲🇳";
+      let img = p.image || (Array.isArray(p.images) && p.images[0]) || "";
+      if(img && !/^https?:/i.test(img)) img = SITE_URL + (img.startsWith("/") ? "" : "/") + img;
+      const url = `${SITE_URL}/p/${p.id}`;
+      const set = (prop, val) => { html = html.replace(new RegExp(`(<meta property="${prop}" content=")[^"]*(")`), (m,a,b)=>a+escAttr(val)+b); };
+      set("og:title", title); set("og:description", desc); set("og:url", url); set("og:type", "product");
+      if(img){ set("og:image", img); html = html.replace(/<meta property="og:image:width"[^>]*>\s*/,"").replace(/<meta property="og:image:height"[^>]*>\s*/,""); }
+      html = html.replace(/<title>[^<]*<\/title>/, ()=>`<title>${escAttr(title)}</title>`);
+      html = html.replace("</head>", ()=>`<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escAttr(title)}">${img?`<meta name="twitter:image" content="${escAttr(img)}">`:""}<link rel="canonical" href="${escAttr(url)}"></head>`);
+    }
+    res.set("Cache-Control", "no-cache");
+    res.type("html").send(html);
+  }catch(e){ res.status(500).send("Server error"); }
+}
+app.get("/p/:id", (req,res)=>renderProductPage(req,res,req.params.id));
+app.get("/", (req,res,next)=> req.query.p ? renderProductPage(req,res,req.query.p) : next());
 app.use(express.static(__dirname, { index: "index.html", etag: true, setHeaders(res, p){
   if (/\.(html|js|css|json)$/i.test(p)) res.set("Cache-Control", "no-cache, must-revalidate"); // шинэчлэлт шууд харагдана
 }}));
