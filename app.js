@@ -757,9 +757,10 @@ async function adminTab(tab){
             <option value="out">Дууссан</option>
           </select>
         </div>
+        <div id="stockSummary" class="stock-summary"></div>
         <div id="adminProductsList"></div>`;
       window.__allProducts=ps;
-      renderAdminProductsList(ps);
+      renderAdminProductsList(ps); renderStockSummary(ps);
     }
 
     if(tab==="orders"){
@@ -866,6 +867,45 @@ function filterAdminProducts(){
   if(stock==="in") list=list.filter(p=>Number(p.stock||0)>0);
   if(stock==="out") list=list.filter(p=>Number(p.stock||0)<=0);
   renderAdminProductsList(list);
+  renderStockSummary(list);
+}
+
+// ---------- Үлдэгдлийн нэгтгэл ба файл (Excel) татах ----------
+function stockTotals(list){
+  let items=0,pcs=0,sum=0,out=0;
+  list.forEach(p=>{ const s=Number(p.stock||0); if(s>0){ items++; pcs+=s; sum+=s*(Number(p.price)||0); } else out++; });
+  return {items,pcs,sum,out,all:list.length};
+}
+function renderStockSummary(list){
+  const el=$("stockSummary"); if(!el) return;
+  const t=stockTotals(list);
+  el.innerHTML=`<div class="ss-grid">
+    <div><b>${t.items}</b><span>Бараа (үлдэгдэлтэй)</span></div>
+    <div><b>${t.pcs}</b><span>Нийт ширхэг</span></div>
+    <div><b>${money(t.sum)}</b><span>Нийт дүн (зарах үнээр)</span></div>
+    <div><b>${t.out}</b><span>Дууссан</span></div>
+  </div>
+  <button class="primary" onclick="exportStock()">📥 Үлдэгдлийг файлаар татах (Excel)</button>`;
+}
+function exportStock(){
+  const q=($("prodSearch")?.value||"").trim().toLowerCase(), cat=$("prodCatFilter")?.value||"", st=$("prodStockFilter")?.value||"";
+  let list=(window.__allProducts||[]);
+  if(q) list=list.filter(p=>(p.name||"").toLowerCase().includes(q));
+  if(cat) list=list.filter(p=>p.category===cat);
+  if(st==="in") list=list.filter(p=>Number(p.stock||0)>0);
+  if(st==="out") list=list.filter(p=>Number(p.stock||0)<=0);
+  const cell=v=>{ v=String(v??""); return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const head=["ID","Нэр","Ангилал","Төрөл","Зарах үнэ ₮","Анхны үнэ ₮","Хямдрал %","Үнэ ₩","Жин кг","Үлдэгдэл","Хэмжээ (хэмжээ:тоо)","Нийт дүн ₮","Төлөв"];
+  const rows=list.map(p=>{
+    const s=Number(p.stock||0), sizes=(Array.isArray(p.sizes)?p.sizes:[]).map(x=>x.size+":"+x.qty).join(" | ");
+    return [p.id,p.name,CATEGORY_LABELS[p.category]||p.category||"",BRAND_LABELS[p.brand]||p.brand||"",p.price||0,Number(p.old_price)>0?p.old_price:"",salePct(p)||"",p.price_krw||"",p.weight_kg||"",s,sizes,s*(Number(p.price)||0),p.active===false?"Нуусан":(s>0?"Бэлэн":"Дууссан")];
+  });
+  const t=stockTotals(list);
+  rows.push([]); rows.push(["","НИЙТ","","","","","","","",t.pcs,"",t.sum,""]);
+  const csv="\ufeff"+[head,...rows].map(r=>r.map(cell).join(",")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const d=new Date(), stamp=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const aEl=document.createElement("a"); aEl.href=URL.createObjectURL(blob); aEl.download="uldegdel-"+stamp+".csv"; document.body.appendChild(aEl); aEl.click(); aEl.remove();
 }
 
 function openAdminOrderDetail(id){
