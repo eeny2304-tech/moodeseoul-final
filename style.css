@@ -1060,3 +1060,9 @@ body{padding-bottom:84px}
 .pk-row:first-of-type{border-top:0}
 .pk-row b{font-size:.75rem;color:var(--muted)}
 .pk-row a{color:var(--teal);font-weight:800;text-decoration:none}
+
+.stock-summary{margin:10px 0 14px}
+.ss-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ss-grid>div{background:var(--bg-card-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.ss-grid b{font-size:1.05rem;font-weight:800}
+.ss-grid span{font-size:.72rem;color:var(--muted)}
