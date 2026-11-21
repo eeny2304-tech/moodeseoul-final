@@ -1066,3 +1066,12 @@ body{padding-bottom:84px}
 .ss-grid>div{background:var(--bg-card-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
 .ss-grid b{font-size:1.05rem;font-weight:800}
 .ss-grid span{font-size:.72rem;color:var(--muted)}
+
+.sub-filters{margin:0 0 10px}
+.sub-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.sub-row::-webkit-scrollbar{display:none}
+.sub-chip{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg-card-2);color:var(--ink);font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.sub-chip.active{background:var(--grad);color:#0b0b0e;border-color:transparent}
+.sub-size{display:flex;align-items:center;gap:8px;margin:2px 0 6px}
+.sub-size label{font-size:.8rem;font-weight:700;color:var(--muted)}
+.sub-size select{padding:7px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg-card-2);color:var(--ink);font-weight:700}
