@@ -1,4 +1,3 @@
-
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
@@ -134,6 +133,9 @@ async function dbInit() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price integer DEFAULT 0;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cargo_included boolean DEFAULT false;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_kg numeric DEFAULT 0;`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS gender text DEFAULT '';`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS kind text DEFAULT '';`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS maker text DEFAULT '';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS featured boolean DEFAULT false;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS brand text DEFAULT '';`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt text DEFAULT '';`);
@@ -245,6 +247,8 @@ async function listProducts(admin=false) {
   const rows = (await pool.query(q)).rows;
   return rows.map(p => ({...p, sizes: parseSizes(p.sizes), images: parseImages(p.images)}));
 }
+const GENDERS=["women","men","kids"], KINDS=["pants","sport","tracksuit","shirt","hoodie"], MAKERS=["nike","adidas","under_armour","other"];
+function pick(v,list){ v=String(v||""); return list.includes(v)?v:""; }
 function cleanOld(o,price){ o=Number(o)||0; price=Number(price)||0; return o>price&&price>0?Math.round(o):0; }
 async function createProduct(p) {
   const sizes = parseSizes(p.sizes);
@@ -253,12 +257,12 @@ async function createProduct(p) {
   const stock = sizes.length ? totalFromSizes(sizes) : (Number(p.stock) || 0);
   if (!usePostgres) {
     const d=loadJson(); const id=(d.products[0]?.id||0)+1;
-    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",old_price:cleanOld(p.old_price,p.price),cargo_included:!!p.cargo_included,featured:!!p.featured,weight_kg:Number(p.weight_kg)||0,active:p.active!==false,sizes};
+    const item={id,name:p.name,description:p.description||"",price:Number(p.price)||0,price_krw:Number(p.price_krw)||0,stock,category:p.category||"",brand:p.brand||"",image:mainImage,images,pickup:p.pickup||"",old_price:cleanOld(p.old_price,p.price),cargo_included:!!p.cargo_included,featured:!!p.featured,weight_kg:Number(p.weight_kg)||0,gender:pick(p.gender,GENDERS),kind:pick(p.kind,KINDS),maker:pick(p.maker,MAKERS),active:p.active!==false,sizes};
     d.products.push(item); saveJson(d); return item;
   }
-  return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,brand,image,images,pickup,active,sizes,old_price,cargo_included,featured,weight_kg)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0])).rows[0];
+  return (await pool.query(`INSERT INTO products(name,description,price,price_krw,stock,category,brand,image,images,pickup,active,sizes,old_price,cargo_included,featured,weight_kg,gender,kind,maker)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0,pick(p.gender,GENDERS),pick(p.kind,KINDS),pick(p.maker,MAKERS)])).rows[0];
 }
 async function updateProduct(id,p) {
   const sizes = parseSizes(p.sizes);
@@ -267,11 +271,11 @@ async function updateProduct(id,p) {
   const stock = sizes.length ? totalFromSizes(sizes) : Number(p.stock)||0;
   if (!usePostgres) {
     const d=loadJson(), i=d.products.findIndex(x=>x.id==id); if(i<0) throw Error("Product not found");
-    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",old_price:cleanOld(p.old_price??d.products[i].old_price??0,p.price??d.products[i].price),cargo_included:!!(p.cargo_included??d.products[i].cargo_included),featured:!!(p.featured??d.products[i].featured),weight_kg:Number(p.weight_kg??d.products[i].weight_kg??0)||0,sizes};
+    d.products[i]={...d.products[i],...p,price:Number(p.price??d.products[i].price),price_krw:Number(p.price_krw??d.products[i].price_krw??0),stock,images,image:mainImage,pickup:p.pickup??d.products[i].pickup??"",old_price:cleanOld(p.old_price??d.products[i].old_price??0,p.price??d.products[i].price),cargo_included:!!(p.cargo_included??d.products[i].cargo_included),featured:!!(p.featured??d.products[i].featured),weight_kg:Number(p.weight_kg??d.products[i].weight_kg??0)||0,gender:pick(p.gender??d.products[i].gender,GENDERS),kind:pick(p.kind??d.products[i].kind,KINDS),maker:pick(p.maker??d.products[i].maker,MAKERS),sizes};
     saveJson(d); return d.products[i];
   }
-  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,brand=$7,image=$8,images=$9,pickup=$10,active=$11,sizes=$12,old_price=$13,cargo_included=$14,featured=$15,weight_kg=$16 WHERE id=$17 RETURNING *`,
-    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0,id])).rows[0];
+  return (await pool.query(`UPDATE products SET name=$1,description=$2,price=$3,price_krw=$4,stock=$5,category=$6,brand=$7,image=$8,images=$9,pickup=$10,active=$11,sizes=$12,old_price=$13,cargo_included=$14,featured=$15,weight_kg=$16,gender=$17,kind=$18,maker=$19 WHERE id=$20 RETURNING *`,
+    [p.name,p.description||"",Number(p.price)||0,Number(p.price_krw)||0,stock,p.category||"",p.brand||"",mainImage,JSON.stringify(images),p.pickup||"",p.active!==false,JSON.stringify(sizes),cleanOld(p.old_price,p.price),!!p.cargo_included,!!p.featured,Number(p.weight_kg)||0,pick(p.gender,GENDERS),pick(p.kind,KINDS),pick(p.maker,MAKERS),id])).rows[0];
 }
 async function deleteProduct(id) {
   if (!usePostgres) { const d=loadJson(); d.products=d.products.filter(x=>x.id!=id); saveJson(d); return; }
