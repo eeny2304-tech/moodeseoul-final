@@ -485,13 +485,47 @@ function fallbackCopy(value, done){
 
 let activeBrand = "";
 let activeType = "ready";
-function selectType(t){ activeType=t; document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b.dataset.type===t)); filterProducts(); }
-function setType(btn){ activeType=btn.dataset.type; document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b===btn)); filterProducts(); }
+function selectType(t){ activeType=t; activeSize=""; renderSubFilters(); document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b.dataset.type===t)); filterProducts(); }
+function setType(btn){ activeType=btn.dataset.type; activeSize=""; renderSubFilters(); document.querySelectorAll("#typeTabs .type-tab").forEach(b=>b.classList.toggle("active",b===btn)); filterProducts(); }
 
+let activeGender="", activeKind="", activeMaker="", activeSize="";
+const GENDER_LABELS={women:"Эмэгтэй",men:"Эрэгтэй",kids:"Хүүхэд"};
+const KIND_LABELS={pants:"Өмд",sport:"Дасгалын хувцас",tracksuit:"Подволк",shirt:"Цамц",hoodie:"Hoodie"};
+const MAKER_LABELS={nike:"Nike",adidas:"Adidas",under_armour:"Under Armour",other:"Бусад"};
+function sizeTokens(p){
+  return (Array.isArray(p.sizes)?p.sizes:[]).filter(z=>Number(z.qty)>0).map(z=>String(z.size).trim().split(/[\s\-–/]+/)[0].toLowerCase()).filter(Boolean);
+}
+const SIZE_ORDER=["xxs","xs","s","m","l","xl","xxl","2xl","3xl"];
+function sizeSort(a,b){ const na=parseFloat(a), nb=parseFloat(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; const ia=SIZE_ORDER.indexOf(a), ib=SIZE_ORDER.indexOf(b); if(ia>=0&&ib>=0) return ia-ib; return a<b?-1:1; }
+function chipRow(items,active,fn){
+  return `<div class="sub-row">${items.map(([v,l])=>`<button class="sub-chip ${active===v?"active":""}" onclick="${fn}('${v}')">${l}</button>`).join("")}</div>`;
+}
+function renderSubFilters(){
+  const el=$("subFilters"); if(!el) return;
+  if(activeBrand!=="outlet_clothes" && activeBrand!=="outlet_shoes"){ el.innerHTML=""; return; }
+  const clothes=activeBrand==="outlet_clothes";
+  const base=products.filter(p=>p.brand===activeBrand && (activeType==="order"?p.category==="order":p.category!=="order"));
+  const set=new Set(); base.forEach(p=>sizeTokens(p).forEach(t=>set.add(t)));
+  const sizes=[...set].sort(sizeSort);
+  let html="";
+  if(clothes){
+    html+=chipRow([["","Бүгд"],...Object.entries(GENDER_LABELS)],activeGender,"setSub.bind(null,'gender')");
+    html+=chipRow([["","Бүх төрөл"],...Object.entries(KIND_LABELS)],activeKind,"setSub.bind(null,'kind')");
+  } else {
+    html+=chipRow([["","Бүх брэнд"],...Object.entries(MAKER_LABELS)],activeMaker,"setSub.bind(null,'maker')");
+  }
+  if(sizes.length) html+=`<div class="sub-size"><label>📏 Размер:</label><select onchange="setSub('size',this.value)"><option value="">Бүх размер</option>${sizes.map(s=>`<option value="${s}" ${activeSize===s?"selected":""}>${s.toUpperCase()}</option>`).join("")}</select></div>`;
+  el.innerHTML=html;
+}
+function setSub(kind,v){
+  if(kind==="gender") activeGender=v; else if(kind==="kind") activeKind=v; else if(kind==="maker") activeMaker=v; else activeSize=v;
+  renderSubFilters(); filterProducts();
+}
 function setBrand(btn){
   document.querySelectorAll(".brand-tab").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
   activeBrand = btn.dataset.brand || "";
+  activeGender=activeKind=activeMaker=activeSize=""; renderSubFilters();
   const hint=$("brandHint"); if(hint){ hint.textContent=btn.dataset.hint||""; hint.classList.toggle("hidden",!btn.dataset.hint); }
   filterProducts();
 }
@@ -500,18 +534,37 @@ function productSection(title,sub,list,id){
   if(!list.length) return "";
   return `<div class="prod-section"${id?` id="${id}"`:""}><div class="ps-head"><h3>${title}</h3>${sub?`<small>${sub}</small>`:""}</div><div class="grid">${list.map(productCardHtml).join("")}</div></div>`;
 }
+// Размераар хайх: "42", "42.5", "265" гэх мэт. Зөвхөн үлдэгдэлтэй размерыг тооцно.
+function sizeMatches(p,w){
+  if(!/^[\d.,]+$/.test(w)) return false;
+  w=w.replace(",",".");
+  return (Array.isArray(p.sizes)?p.sizes:[]).some(z=>{
+    if(!(Number(z.qty)>0)) return false;
+    return String(z.size).toLowerCase().split(/[\s\-–/]+/).filter(Boolean).some(t=>t===w || (w.length>=2 && !w.includes(".") && t.startsWith(w+".")));
+  });
+}
 function filterProducts(){
   const q=($("productSearch")?.value||"").trim().toLowerCase();
   let filtered = products.filter(p=>activeType==="order"?p.category==="order":p.category!=="order");
-  if(q) filtered = filtered.filter(p=>(p.name||"").toLowerCase().includes(q));
+  if(q){
+    const words=q.split(/\s+/).filter(Boolean);
+    filtered = filtered.filter(p=>words.every(w=>(p.name||"").toLowerCase().includes(w) || sizeMatches(p,w)));
+  }
   if(activeBrand){
     filtered = activeBrand === "other"
       ? filtered.filter(p=>!BRAND_KEYS.includes(p.brand))
       : filtered.filter(p=>p.brand === activeBrand);
   }
+  if(activeBrand==="outlet_clothes"){
+    if(activeGender) filtered=filtered.filter(p=>p.gender===activeGender);
+    if(activeKind) filtered=filtered.filter(p=>p.kind===activeKind);
+  }
+  if(activeBrand==="outlet_shoes" && activeMaker) filtered=filtered.filter(p=>p.maker===activeMaker||(!p.maker&&p.brand===activeMaker));
+  if(activeSize && (activeBrand==="outlet_clothes"||activeBrand==="outlet_shoes")) filtered=filtered.filter(p=>sizeTokens(p).includes(activeSize));
+  const subOn=!!(activeGender||activeKind||activeMaker||activeSize);
   const el=$("products");
   if(!filtered.length){ el.innerHTML=`<div class="admin-card">${(q||activeBrand)?"Хайлтад тохирох бараа олдсонгүй.":(activeType==="order"?"Захиалгаар авах бараа одоогоор алга.":"Бэлэн бараа одоогоор алга.")}</div>`; return; }
-  if(q || activeBrand){
+  if(q || activeBrand || subOn){
     el.innerHTML=`<div class="grid wrap">${filtered.map(productCardHtml).join("")}</div>`;
     return;
   }
@@ -724,6 +777,9 @@ async function adminTab(tab){
               <option value="costco">Costco</option>
               <option value="olive_young">Olive Young</option>
             </select>
+            <select id="pgender"><option value="">Хүйс (хувцас)</option><option value="women">Эмэгтэй</option><option value="men">Эрэгтэй</option><option value="kids">Хүүхэд</option></select>
+            <select id="pkind"><option value="">Хувцасны төрөл</option><option value="pants">Өмд</option><option value="sport">Дасгалын хувцас</option><option value="tracksuit">Подволк</option><option value="shirt">Цамц</option><option value="hoodie">Hoodie</option></select>
+            <select id="pmaker"><option value="">Брэнд (гутал)</option><option value="nike">Nike</option><option value="adidas">Adidas</option><option value="under_armour">Under Armour</option><option value="other">Бусад</option></select>
           </div>
           <input id="ppickup" placeholder="📍 Авах цэг (жиш: Улаанбаатар, Драгон карго)">
           <label class="check-row"><input type="checkbox" id="pcargo"> Каргоны төлбөр үнэд орсон ("Карго орсон")</label>
@@ -1172,6 +1228,7 @@ async function addProduct(){
     stock,
     category:$("pc").value,
     brand:$("pbrand").value,
+    gender:$("pgender").value, kind:$("pkind").value, maker:$("pmaker").value,
     image:pendingImages[0]||"",
     images:pendingImages,
     pickup:$("ppickup").value,
@@ -1191,7 +1248,7 @@ function openEditProduct(id){
   editingProductId=id;
   const set=(k,v)=>{ $("e_"+k).value=v??""; };
   set("name",p.name); set("price",baseFromProd(p)); set("krw",p.price_krw||""); set("old",pctFromOld(p)); set("weight",p.weight_kg>0?p.weight_kg:"");
-  set("cat",p.category||"order"); set("brand",p.brand||""); set("pickup",p.pickup||""); set("desc",p.description||"");
+  set("cat",p.category||"order"); set("brand",p.brand||""); set("gender",p.gender||""); set("kind",p.kind||""); set("maker",p.maker||""); set("pickup",p.pickup||""); set("desc",p.description||"");
   $("e_cargo").checked=!!p.cargo_included; $("e_feat").checked=!!p.featured;
   $("e_sizes").innerHTML="";
   const sz=Array.isArray(p.sizes)?p.sizes:[];
@@ -1233,7 +1290,7 @@ async function saveEditProduct(){
   try{
     await api("/api/admin/products/"+editingProductId,{method:"PUT",body:JSON.stringify({...orig,
       name,...applySale($("e_price").value,$("e_old").value),price_krw:$("e_krw").value,weight_kg:$("e_weight").value,
-      category:$("e_cat").value,brand:$("e_brand").value,pickup:$("e_pickup").value,description:$("e_desc").value,
+      category:$("e_cat").value,brand:$("e_brand").value,gender:$("e_gender").value,kind:$("e_kind").value,maker:$("e_maker").value,pickup:$("e_pickup").value,description:$("e_desc").value,
       cargo_included:$("e_cargo").checked,featured:$("e_feat").checked,
       image:editImages[0]||"",images:editImages,sizes,stock})});
   }catch(e){ return alert(e.message); }
