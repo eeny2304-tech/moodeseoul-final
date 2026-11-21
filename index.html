@@ -28,7 +28,7 @@
 <meta name="twitter:image" content="https://moodeseoul.com/IMG_8588.jpeg">
 <link rel="icon" href="/IMG_8588.jpeg">
 
-<link rel="stylesheet" href="/style.css?v=20261121b">
+<link rel="stylesheet" href="/style.css?v=20261121e">
 </head>
 <body>
 <header class="top">
@@ -66,7 +66,7 @@
     <button class="type-tab active" data-type="ready" onclick="setType(this)">🛍️ Бэлэн бараа</button>
     <button class="type-tab" data-type="order" onclick="setType(this)">✈️ Захиалгаар</button>
   </div>
-  <input id="productSearch" class="product-search" placeholder="🔍 Бараа хайх..." oninput="filterProducts()">
+  <input id="productSearch" class="product-search" placeholder="🔍 Нэр эсвэл размер (жиш: 42, nike 265)" oninput="filterProducts()">
   <div class="brand-tabs" id="brandTabs">
     <button class="brand-tab active" data-brand="" onclick="setBrand(this)">Бүгд</button>
     <button class="brand-tab" data-brand="outlet_clothes" data-hint="Nike, Adidas гэх мэт" onclick="setBrand(this)">👕 Outlet хувцас</button>
@@ -75,6 +75,7 @@
     <button class="brand-tab" data-brand="olive_young" onclick="setBrand(this)">💄 Olive Young</button>
   </div>
   <p class="brand-hint hidden" id="brandHint"></p>
+  <div id="subFilters" class="sub-filters"></div>
   <div id="products"></div>
 </section>
 
@@ -181,6 +182,9 @@
       <label>Жин кг<input id="e_weight" type="number" step="0.1" placeholder="жиш: 1.5"></label>
       <label>Ангилал<select id="e_cat"><option value="mn_belen">Монголд бэлэн</option><option value="kr_belen">Солонгост бэлэн</option><option value="order">Захиалгийн бараа</option></select></label>
       <label>Төрөл<select id="e_brand"><option value="">Төрөл сонгох</option><option value="outlet_clothes">Outlet хувцас</option><option value="outlet_shoes">Outlet гутал</option><option value="costco">Costco</option><option value="olive_young">Olive Young</option></select></label>
+      <label>Хүйс (хувцас)<select id="e_gender"><option value="">Хүйс (хувцас)</option><option value="women">Эмэгтэй</option><option value="men">Эрэгтэй</option><option value="kids">Хүүхэд</option></select></label>
+      <label>Хувцасны төрөл<select id="e_kind"><option value="">Хувцасны төрөл</option><option value="pants">Өмд</option><option value="sport">Дасгалын хувцас</option><option value="tracksuit">Подволк</option><option value="shirt">Цамц</option><option value="hoodie">Hoodie</option></select></label>
+      <label>Брэнд (гутал)<select id="e_maker"><option value="">Брэнд (гутал)</option><option value="nike">Nike</option><option value="adidas">Adidas</option><option value="under_armour">Under Armour</option><option value="other">Бусад</option></select></label>
     </div>
     <label class="edit-full">📍 Авах цэг<input id="e_pickup"></label>
     <label class="check-row"><input type="checkbox" id="e_cargo"> Карго орсон</label>
@@ -203,7 +207,7 @@
     <button class="welcome-opt main" onclick="welcomeGo('track')"><span class="wi">📦</span><span><b>Захиалгаа шалгах</b><small>Захиалсан бараагаа хянах</small></span><i>›</i></button>
     <button class="welcome-opt" onclick="welcomeGo('order')"><span class="wi">🇲🇳</span><span><b>Солонгосоос Монголд захиалах</b><small>Хүссэн бараагаа захиалаад Монголд хүлээн авна</small></span><i>›</i></button>
     <button class="welcome-opt" onclick="welcomeGo('kr')"><span class="wi">🇰🇷</span><span><b>Солонгост захиалах</b><small>Солонгост байгаа хүмүүс маань тэгбэгээр (택배) хүлээн авах боломжтой</small></span><i>›</i></button>
-    <a href="#" class="welcome-skip" onclick="closeWelcome();return false;">Зүгээр үзэх</a>
+    <a href="#" class="welcome-skip" onclick="closeWelcome();return false;">Хаах</a>
   </div>
 </div>
 
@@ -362,5 +366,5 @@
   <div class="footer-bottom">© 2026 <span id="footerName">MOODE SEOUL</span>. Бүх эрх хуулиар хамгаалагдсан.</div>
 </footer>
 
-<script src="/app.js?v=20261121b"></script>
+<script src="/app.js?v=20261121e"></script>
 </body></html>
