@@ -1,3 +1,4 @@
+
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
@@ -41,7 +42,7 @@ async function renderProductPage(req, res, id){
       const desc = (String(p.description||"").replace(/\s+/g," ").trim().slice(0,160)) || "Солонгосоос шууд захиалга — MOODE SEOUL 🇰🇷✈️🇲🇳";
       let img = p.image || (Array.isArray(p.images) && p.images[0]) || "";
       if(img && !/^https?:/i.test(img)) img = SITE_URL + (img.startsWith("/") ? "" : "/") + img;
-      const url = `${SITE_URL}/p/${p.id}`;
+      const url = `${SITE_URL}/${String(p.id).padStart(3,"0")}`;
       const set = (prop, val) => { html = html.replace(new RegExp(`(<meta property="${prop}" content=")[^"]*(")`), (m,a,b)=>a+escAttr(val)+b); };
       set("og:title", title); set("og:description", desc); set("og:url", url); set("og:type", "product");
       if(img){ set("og:image", img); html = html.replace(/<meta property="og:image:width"[^>]*>\s*/,"").replace(/<meta property="og:image:height"[^>]*>\s*/,""); }
@@ -53,6 +54,8 @@ async function renderProductPage(req, res, id){
   }catch(e){ res.status(500).send("Server error"); }
 }
 app.get("/p/:id", (req,res)=>renderProductPage(req,res,req.params.id));
+// Богино хаяг: moodeseoul.com/005  (005 = барааны дугаар)
+app.get(/^\/(\d{1,6})\/?$/, (req,res)=>renderProductPage(req,res,Number(req.params[0])));
 app.get("/", (req,res,next)=> req.query.p ? renderProductPage(req,res,req.query.p) : next());
 app.use(express.static(__dirname, { index: "index.html", etag: true, setHeaders(res, p){
   if (/\.(html|js|css|json)$/i.test(p)) res.set("Cache-Control", "no-cache, must-revalidate"); // шинэчлэлт шууд харагдана
