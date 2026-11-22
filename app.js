@@ -677,7 +677,7 @@ async function adminLogin(){try{const d=await api("/api/auth/admin",{method:"POS
 
 async function adminTab(tab){
   document.querySelectorAll(".admin-nav button").forEach(b=>b.classList.remove("active"));
-  const btnMap={dashboard:0,products:1,orders:2,customers:3,settings:4};
+  const btnMap={dashboard:0,products:1,orders:2,sales:3,customers:4,settings:5};
   const navBtns=document.querySelectorAll(".admin-nav button");
   if(navBtns[btnMap[tab]]) navBtns[btnMap[tab]].classList.add("active");
 
@@ -837,6 +837,8 @@ async function adminTab(tab){
         <div id="ordersAdminList"></div>`;
       filterOrdersAdmin();
     }
+
+    if(tab==="sales"){ await loadSales(); }
 
     if(tab==="customers"){
       const cs=await api("/api/admin/customers");
@@ -1616,4 +1618,87 @@ async function shareStory(id){
     }
   }catch(e){ alert("Зураг үүсгэхэд алдаа гарлаа. Дахин оролдоно уу."); }
   if(btn) btn.disabled=false;
+}
+
+// ---------- Борлуулалт (сайтаас орсон захиалга + гараар бүртгэсэн) ----------
+const SALE_CH={store:"Дэлгүүр",facebook:"Facebook",instagram:"Instagram",other:"Бусад"};
+let salesMonth="";   // "YYYY-MM" эсвэл "" = бүх сар
+async function loadSales(){
+  const [os,manual]=await Promise.all([api("/api/admin/orders"),api("/api/admin/sales")]);
+  const lines=[];
+  os.filter(o=>o.status!=="cancelled").forEach(o=>{
+    let items=o.items; if(typeof items==="string"){ try{items=JSON.parse(items)}catch(_){items=[]} } if(!Array.isArray(items)) items=[];
+    const d=new Date(o.created_at), day=isNaN(d)?"":d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    items.forEach(i=>lines.push({src:"web",id:o.id,date:day,name:i.name||"—",size:i.size||"",qty:Number(i.qty)||1,price:Number(i.price)||0,customer:o.customer_name||"",phone:o.customer_phone||"",channel:"Сайт",note:o.order_code||""}));
+  });
+  manual.forEach(s=>lines.push({src:"manual",id:s.id,date:String(s.sold_at||"").slice(0,10),name:s.product_name,size:s.size||"",qty:Number(s.qty)||1,price:Number(s.unit_price)||0,customer:s.customer_name||"",phone:s.customer_phone||"",channel:SALE_CH[s.channel]||"Гараар",note:s.note||""}));
+  lines.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  window.__saleLines=lines;
+  if(!salesMonth){ const n=new Date(); salesMonth=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0"); }
+  const prods=(window.__allProducts||[]);
+  $("adminContent").innerHTML=`<h2>Борлуулалт</h2>
+    <div class="admin-row">
+      <input type="month" id="salesMonth" value="${salesMonth}" onchange="salesMonth=this.value;renderSales()">
+      <button class="chip" onclick="salesMonth='';$('salesMonth').value='';renderSales()">Бүх сар</button>
+      <button class="primary" onclick="exportSales()">📥 Файлаар татах</button>
+    </div>
+    <div id="salesView"></div>
+    <h3 class="section-sub">➕ Гараар борлуулалт бүртгэх</h3>
+    <div class="admin-card sale-form">
+      <input type="date" id="sl_date" value="${new Date().toISOString().slice(0,10)}">
+      <input id="sl_name" list="sl_prods" placeholder="Барааны нэр">
+      <datalist id="sl_prods">${prods.map(p=>`<option value="${esc(p.name)}">`).join("")}</datalist>
+      <input id="sl_size" placeholder="Размер (заавал биш)">
+      <input id="sl_qty" type="number" min="1" value="1" placeholder="Ширхэг">
+      <input id="sl_price" type="number" min="0" placeholder="Нэг ширхгийн үнэ ₮">
+      <input id="sl_cust" placeholder="Хэнд зарсан (нэр)">
+      <input id="sl_phone" inputmode="tel" placeholder="Утас (заавал биш)">
+      <select id="sl_ch"><option value="store">Дэлгүүр</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="other">Бусад</option></select>
+      <input id="sl_note" placeholder="Тэмдэглэл (заавал биш)">
+      <button class="primary" onclick="addManualSale()">Бүртгэх</button>
+    </div>`;
+  renderSales();
+}
+function salesFiltered(){ const L=window.__saleLines||[]; return salesMonth?L.filter(x=>String(x.date).startsWith(salesMonth)):L; }
+function renderSales(){
+  const L=salesFiltered(), el=$("salesView"); if(!el) return;
+  const tot=L.reduce((s,x)=>s+x.qty*x.price,0), pcs=L.reduce((s,x)=>s+x.qty,0);
+  const web=L.filter(x=>x.src==="web").reduce((s,x)=>s+x.qty*x.price,0);
+  // хэнд зарсан
+  const byC={}; L.forEach(x=>{ const k=(x.customer||"—")+(x.phone?" · "+x.phone:""); (byC[k]=byC[k]||{n:0,q:0,s:0}); byC[k].n++; byC[k].q+=x.qty; byC[k].s+=x.qty*x.price; });
+  const custRows=Object.entries(byC).sort((a,b)=>b[1].s-a[1].s).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.q}</td><td>${money(v.s)}</td></tr>`).join("");
+  // сар сараар (бүх өгөгдөл)
+  const byM={}; (window.__saleLines||[]).forEach(x=>{ const m=String(x.date).slice(0,7)||"—"; (byM[m]=byM[m]||{q:0,s:0}); byM[m].q+=x.qty; byM[m].s+=x.qty*x.price; });
+  const monthRows=Object.entries(byM).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,v])=>`<tr onclick="salesMonth='${m}';$('salesMonth').value='${m}';renderSales()" style="cursor:pointer"><td>${m}</td><td>${v.q}</td><td>${money(v.s)}</td></tr>`).join("");
+  el.innerHTML=`<div class="ss-grid">
+      <div><b>${money(tot)}</b><span>Нийт борлуулалт</span></div>
+      <div><b>${pcs}</b><span>Зарсан ширхэг</span></div>
+      <div><b>${money(web)}</b><span>Сайтаас</span></div>
+      <div><b>${money(tot-web)}</b><span>Гараар бүртгэсэн</span></div>
+    </div>
+    <h3 class="section-sub">Сар сараар <small>(дарж сар сонгоно)</small></h3>
+    <div class="orders-table-wrap"><table class="orders-table"><thead><tr><th>Сар</th><th>Ширхэг</th><th>Дүн</th></tr></thead><tbody>${monthRows||"<tr><td colspan=3>Мэдээлэл алга</td></tr>"}</tbody></table></div>
+    <h3 class="section-sub">Хэнд зарсан</h3>
+    <div class="orders-table-wrap"><table class="orders-table"><thead><tr><th>Худалдан авагч</th><th>Ширхэг</th><th>Дүн</th></tr></thead><tbody>${custRows||"<tr><td colspan=3>Мэдээлэл алга</td></tr>"}</tbody></table></div>
+    <h3 class="section-sub">Борлуулалтын жагсаалт</h3>
+    <div class="orders-table-wrap"><table class="orders-table"><thead><tr><th>Огноо</th><th>Бараа</th><th>Ш</th><th>Дүн</th><th>Хэнд</th><th>Суваг</th><th></th></tr></thead><tbody>${
+      L.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.name)}${x.size?` <small>(${esc(x.size)})</small>`:""}</td><td>${x.qty}</td><td>${money(x.qty*x.price)}</td><td>${esc(x.customer||"—")}${x.phone?`<br><small>${esc(x.phone)}</small>`:""}</td><td>${esc(x.channel)}</td><td>${x.src==="manual"?`<button class="mini-btn" onclick="deleteManualSale(${x.id})">🗑</button>`:""}</td></tr>`).join("")||"<tr><td colspan=7>Мэдээлэл алга</td></tr>"}</tbody></table></div>`;
+}
+async function addManualSale(){
+  try{
+    await api("/api/admin/sales",{method:"POST",body:JSON.stringify({sold_at:$("sl_date").value,product_name:$("sl_name").value,size:$("sl_size").value,qty:$("sl_qty").value,unit_price:$("sl_price").value,customer_name:$("sl_cust").value,customer_phone:$("sl_phone").value,channel:$("sl_ch").value,note:$("sl_note").value})});
+    await loadSales();
+  }catch(e){ alert(e.message); }
+}
+async function deleteManualSale(id){
+  if(!confirm("Энэ бүртгэлийг устгах уу?")) return;
+  try{ await api("/api/admin/sales/"+id,{method:"DELETE"}); await loadSales(); }catch(e){ alert(e.message); }
+}
+function exportSales(){
+  const L=salesFiltered();
+  const cell=v=>{ v=String(v??""); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const rows=[["Огноо","Бараа","Размер","Ширхэг","Нэгж үнэ ₮","Дүн ₮","Хэнд","Утас","Суваг","Тэмдэглэл"],...L.map(x=>[x.date,x.name,x.size,x.qty,x.price,x.qty*x.price,x.customer,x.phone,x.channel,x.note])];
+  rows.push([]); rows.push(["НИЙТ","","",L.reduce((s,x)=>s+x.qty,0),"",L.reduce((s,x)=>s+x.qty*x.price,0)]);
+  const blob=new Blob(["\ufeff"+rows.map(r=>r.map(cell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const aEl=document.createElement("a"); aEl.href=URL.createObjectURL(blob); aEl.download="borluulalt-"+(salesMonth||"buh")+".csv"; document.body.appendChild(aEl); aEl.click(); aEl.remove();
 }
