@@ -87,7 +87,8 @@ const defaultData = {
   admins: [],
   products: [],
   orders: [],
-  customers: []
+  customers: [],
+  sales: []
 };
 
 function loadJson() {
@@ -133,6 +134,11 @@ async function dbInit() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price integer DEFAULT 0;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cargo_included boolean DEFAULT false;`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_kg numeric DEFAULT 0;`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS sales (
+    id serial PRIMARY KEY, sold_at date NOT NULL DEFAULT CURRENT_DATE, product_name text NOT NULL, size text DEFAULT '',
+    qty integer NOT NULL DEFAULT 1, unit_price numeric NOT NULL DEFAULT 0, customer_name text DEFAULT '', customer_phone text DEFAULT '',
+    channel text DEFAULT '', note text DEFAULT '', created_at timestamptz DEFAULT now()
+  );`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS gender text DEFAULT '';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS kind text DEFAULT '';`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS maker text DEFAULT '';`);
@@ -392,6 +398,25 @@ async function deleteOrder(id) {
   }
 }
 
+// ---- Гараар бүртгэсэн борлуулалт (дэлгүүр, Facebook, Instagram гэх мэт) ----
+const SALE_CHANNELS=["store","facebook","instagram","other"];
+async function listSales() {
+  if (!usePostgres) return (loadJson().sales||[]).slice().sort((a,b)=>String(b.sold_at).localeCompare(String(a.sold_at))||b.id-a.id);
+  return (await pool.query("SELECT id,to_char(sold_at,'YYYY-MM-DD') AS sold_at,product_name,size,qty,unit_price,customer_name,customer_phone,channel,note,created_at FROM sales ORDER BY sold_at DESC, id DESC")).rows;
+}
+async function addSale(b) {
+  const name=String(b.product_name||"").trim().slice(0,200); if(!name) throw Error("Барааны нэр хоосон байна");
+  const qty=Math.max(1,Math.min(9999,parseInt(b.qty,10)||1)), price=Math.max(0,Number(b.unit_price)||0);
+  const d0=String(b.sold_at||"").slice(0,10), sold_at=/^\d{4}-\d{2}-\d{2}$/.test(d0)?d0:new Date().toISOString().slice(0,10);
+  const row={product_name:name,size:String(b.size||"").slice(0,40),qty,unit_price:price,sold_at,customer_name:String(b.customer_name||"").slice(0,120),customer_phone:String(b.customer_phone||"").slice(0,40),channel:SALE_CHANNELS.includes(b.channel)?b.channel:"",note:String(b.note||"").slice(0,300)};
+  if (!usePostgres) { const d=loadJson(); d.sales=d.sales||[]; const id=(d.sales.reduce((m,x)=>Math.max(m,x.id),0))+1; const item={id,...row,created_at:new Date().toISOString()}; d.sales.push(item); saveJson(d); return item; }
+  return (await pool.query("INSERT INTO sales(sold_at,product_name,size,qty,unit_price,customer_name,customer_phone,channel,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,to_char(sold_at,'YYYY-MM-DD') AS sold_at,product_name,size,qty,unit_price,customer_name,customer_phone,channel,note",
+    [row.sold_at,row.product_name,row.size,row.qty,row.unit_price,row.customer_name,row.customer_phone,row.channel,row.note])).rows[0];
+}
+async function deleteSale(id) {
+  if (!usePostgres) { const d=loadJson(); d.sales=(d.sales||[]).filter(x=>x.id!=id); saveJson(d); return; }
+  await pool.query("DELETE FROM sales WHERE id=$1",[id]);
+}
 async function listCustomers() {
   if (!usePostgres) return loadJson().customers.slice().reverse().map(({passwordHash,...c})=>c);
   return (await pool.query("SELECT id,phone,name,created_at FROM customers ORDER BY created_at DESC")).rows;
@@ -626,6 +651,9 @@ app.delete("/api/admin/orders/:id", auth("admin"), async (req,res)=>{await delet
 app.get("/api/admin/settings", auth("admin"), async (_,res)=>res.json(await getSettings()));
 app.put("/api/admin/settings", auth("admin"), async (req,res)=>res.json(await setSettings(req.body)));
 
+app.get("/api/admin/sales", auth("admin"), async (_,res)=>res.json(await listSales()));
+app.post("/api/admin/sales", auth("admin"), async (req,res)=>{ try{ res.json(await addSale(req.body||{})); }catch(e){ res.status(400).json({error:e.message}); } });
+app.delete("/api/admin/sales/:id", auth("admin"), async (req,res)=>{ await deleteSale(req.params.id); res.json({ok:true}); });
 app.get("/api/admin/customers", auth("admin"), async (_,res)=>res.json(await listCustomers()));
 // Admin resets a customer's forgotten password: generates a temporary one, shown once to the admin.
 app.post("/api/admin/customers/reset-password", auth("admin"), async (req,res)=>{
