@@ -1075,3 +1075,9 @@ body{padding-bottom:84px}
 .sub-size{display:flex;align-items:center;gap:8px;margin:2px 0 6px}
 .sub-size label{font-size:.8rem;font-weight:700;color:var(--muted)}
 .sub-size select{padding:7px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg-card-2);color:var(--ink);font-weight:700}
+
+.sale-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sale-form input,.sale-form select{min-width:0}
+.sale-form #sl_name,.sale-form #sl_note,.sale-form button{grid-column:1/-1}
+.table-scroll{overflow-x:auto;margin-bottom:12px}
+.admin-table td small{color:var(--muted)}
